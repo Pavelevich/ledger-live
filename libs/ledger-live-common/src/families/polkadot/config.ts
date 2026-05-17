@@ -94,4 +94,28 @@ export const polkadotConfig: Record<string, ConfigInfo> = {
       },
     },
   },
+  config_currency_bittensor: {
+    type: "object",
+    default: {
+      status: {
+        type: "active",
+        features: [
+          { id: "blockchain_txs", status: "active" },
+          { id: "staking_txs", status: "active" },
+        ],
+      },
+      sidecar: {
+        url: getEnv("API_BITTENSOR_SIDECAR"),
+      },
+      node: {
+        url: getEnv("API_BITTENSOR_NODE"),
+      },
+      indexer: {
+        url: getEnv("API_BITTENSOR_INDEXER"),
+      },
+      staking: {
+        electionStatusThreshold: 25,
+      },
+    },
+  },
 };

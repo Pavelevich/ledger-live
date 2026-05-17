@@ -157,6 +157,21 @@ const envDefinitions = {
     def: "https://polkadot-fullnodes.api.live.ledger.com",
     desc: "Polkadot Node",
   },
+  API_BITTENSOR_SIDECAR: {
+    parser: stringParser,
+    def: "",
+    desc: "Bittensor Sidecar API url",
+  },
+  API_BITTENSOR_NODE: {
+    parser: stringParser,
+    def: "",
+    desc: "Bittensor Node url",
+  },
+  API_BITTENSOR_INDEXER: {
+    parser: stringParser,
+    def: "",
+    desc: "Bittensor Indexer API url",
+  },
   MULTIVERSX_API_ENDPOINT: {
     parser: stringParser,
     def: "https://elrond.coin.ledger.com",
