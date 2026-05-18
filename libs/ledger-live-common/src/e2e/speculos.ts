@@ -320,6 +320,14 @@ export const specs: Specs = {
     },
     dependencies: [],
   },
+  Sei: {
+    currency: getCryptoCurrencyById("sei_evm"),
+    appQuery: {
+      model: getSpeculosModel(),
+      appName: "Sei",
+    },
+    dependencies: [AppInfos.ETHEREUM],
+  },
   Litecoin: {
     currency: getCryptoCurrencyById("litecoin"),
     appQuery: {
@@ -868,6 +876,7 @@ export async function signSendTransaction(tx: Transaction) {
     case Currency.POL.id:
     case Currency.ETH.id:
     case Currency.ETH_USDT.id:
+    case Currency.SEI_EVM.id:
       await sendEVM(tx);
       break;
     case Currency.BTC.id:
