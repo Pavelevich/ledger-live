@@ -64,7 +64,7 @@ export function normalizeQuote(
   };
 
   if (formatContext) {
-    quote.formatted = buildFormattedQuoteValues(quoteDetails, feeEstimate, formatContext);
+    quote.formatted = buildFormattedQuoteValues(quoteDetails, formatContext);
   }
 
   return quote;

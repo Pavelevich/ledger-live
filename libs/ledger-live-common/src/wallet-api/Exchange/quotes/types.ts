@@ -27,8 +27,7 @@ export type {
   QuotePermitData,
   QuoteTags,
   QuoteTokenAllowance,
-  QuoteEstimatedNetworkFee,
-  QuoteApprovalNetworkFee,
+  QuoteNetworkFeeAmount,
 } from "@ledgerhq/wallet-api-exchange-module";
 
 export {
