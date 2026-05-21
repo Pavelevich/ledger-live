@@ -17,6 +17,7 @@ import { isSpeculosRemote } from "./helpers/commonHelpers";
 import { SPECULOS_TRACKING_FILE } from "./utils/speculosUtils";
 import { NANO_APP_CATALOG_PATH } from "./utils/constants";
 import { sanitizeError } from "@ledgerhq/live-common/e2e/index";
+import { startMitm } from "./helpers/mitm";
 import type { DetoxAllure2AdapterOptions } from "detox-allure2-adapter";
 
 export default async function setup(): Promise<void> {
@@ -55,6 +56,11 @@ export default async function setup(): Promise<void> {
       `[globalSetup] Last retry detected (attempt ${testSessionIndex + 1}/${maxRetries + 1}), video recording enabled`,
     );
   }
+
+  // Opt-in HTTPS capture for Android runs: spawns mitmweb on the host and
+  // installs the CA + proxy on the emulator. No-op unless MITM=1 and the
+  // active Detox configuration is Android. See e2e/mobile/helpers/mitm.ts.
+  await startMitm();
 }
 
 async function cleanupAllSpeculos() {
