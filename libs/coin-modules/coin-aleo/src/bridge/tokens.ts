@@ -541,10 +541,7 @@ export async function getPrivateTokenBalances({
   const allVerified = await apiClient.getVerifiedTokens({ currency });
   const { registryTokensMap, customProgramTokensMap } = buildVerifiedTokenMaps(allVerified);
 
-  const entriesById = new Map<
-    string,
-    { id: string; contractAddress: string; balance: BigNumber; unspentRecords: AleoPrivateRecord[] }
-  >();
+  const entriesById = new Map<string, AleoPrivateTokenBalance>();
 
   function getOrCreateEntry(id: string, contractAddress: string) {
     let entry = entriesById.get(id);

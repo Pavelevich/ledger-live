@@ -457,8 +457,6 @@ export async function performPrivateSync(
     }
   }
 
-  onProgress?.(PROGRESS_DONE);
-
   if (config.enableTokens) {
     const baseSubAccounts = publicSubAccounts ?? initialAccount.subAccounts ?? [];
     const existingSubAccountIds = new Set(baseSubAccounts.map(sa => sa.id));
@@ -471,6 +469,8 @@ export async function performPrivateSync(
     });
   }
 
+  onProgress?.(PROGRESS_DONE);
+
   return {
     type: "Account",
     id: ledgerAccountId,
@@ -480,21 +480,20 @@ export async function performPrivateSync(
     operations,
     operationsCount: operations.length,
     lastSyncDate: initialAccount?.lastSyncDate,
-    ...(config.enableTokens && {
-      subAccounts: [
-        ...(publicSubAccounts ?? initialAccount.subAccounts ?? []),
-        ...privateTokenSubAccounts,
-      ],
-    }),
+    subAccounts: config.enableTokens
+      ? [...(publicSubAccounts ?? initialAccount.subAccounts ?? []), ...privateTokenSubAccounts]
+      : [],
     aleoResources: {
       transparentBalance,
       provableApi,
       privateBalance,
       unspentPrivateRecords,
       lastPrivateSyncDate: new Date(),
-      ...(config.enableTokens && { hasMigratedPublicTokens: true }),
-      ...(config.enableTokens && { hasMigratedPrivateTokens: true }),
-      ...(config.enableTokens && { privateTokenBalances: privateTokenBalances ?? null }),
+      ...(config.enableTokens && {
+        hasMigratedPublicTokens: true,
+        hasMigratedPrivateTokens: true,
+        privateTokenBalances: privateTokenBalances ?? null,
+      }),
     },
   };
 }
