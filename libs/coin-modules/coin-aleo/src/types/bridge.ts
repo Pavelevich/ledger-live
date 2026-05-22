@@ -10,7 +10,7 @@ import type {
 } from "@ledgerhq/types-live";
 import type { TRANSACTION_TYPE } from "../constants";
 import type { AleoTransactionType } from "./api";
-import type { ProvableApi, AleoUnspentRecord } from "./logic";
+import type { ProvableApi, AleoUnspentRecord, AleoPrivateTokenBalance } from "./logic";
 
 export type Transaction = TransactionCommon & {
   family: "aleo";
@@ -78,6 +78,8 @@ export interface AleoResources {
   privateBalance: BigNumber | null;
   unspentPrivateRecords: AleoUnspentRecord[] | null;
   lastPrivateSyncDate: Date | null;
+  /** Private token balances per token, computed from unspent private token records. */
+  privateTokenBalances?: AleoPrivateTokenBalance[] | null;
   hasMigratedPublicTokens?: boolean;
   hasMigratedPrivateTokens?: boolean;
 }
@@ -88,6 +90,8 @@ export interface AleoResourcesRaw {
   privateBalance: string | null;
   unspentPrivateRecords: string | null;
   lastPrivateSyncDate: string | null;
+  /** JSON-serialized AleoPrivateTokenBalance[] with balance as string and raw unspentRecords. */
+  privateTokenBalances?: string | null;
   hasMigratedPublicTokens?: boolean;
   hasMigratedPrivateTokens?: boolean;
 }

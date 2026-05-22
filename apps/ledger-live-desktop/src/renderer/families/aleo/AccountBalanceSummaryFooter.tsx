@@ -3,9 +3,10 @@ import { Trans, useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { useSelector } from "LLD/hooks/redux";
 import { formatCurrencyUnit } from "@ledgerhq/live-common/currencies/index";
-import type { AleoAccount } from "@ledgerhq/live-common/families/aleo/types";
-import type { TokenAccount } from "@ledgerhq/types-live";
+import type { AleoAccount, AleoResources } from "@ledgerhq/live-common/families/aleo/types";
+import type { Account, TokenAccount } from "@ledgerhq/types-live";
 import { localeSelector } from "~/renderer/reducers/settings";
+import { accountSelector } from "~/renderer/reducers/accounts";
 import Discreet, { useDiscreetMode } from "~/renderer/components/Discreet";
 import Box from "~/renderer/components/Box/Box";
 import Text from "~/renderer/components/Text";
@@ -19,6 +20,12 @@ import { getAccountCurrency } from "@ledgerhq/live-common/account/helpers";
 import { PRIVATE_BALANCE_PLACEHOLDER } from "./constants";
 import { useAleoPrivateSync } from "./hooks/useAleoPrivateSync";
 import { getAleoCurrencyConfig } from "./shared/utils";
+
+function getAleoResources(acc: Account | undefined): AleoResources | undefined {
+  if (!acc) return undefined;
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  return "aleoResources" in acc ? (acc as AleoAccount).aleoResources : undefined;
+}
 
 type AleoSyncState = "ready" | "running" | "complete";
 
@@ -156,12 +163,31 @@ const AccountBalanceSummaryFooter = ({ account }: Readonly<Props>) => {
     };
   }, [isSyncing]);
 
+  const parentAccount = useSelector(state =>
+    account.type === "TokenAccount"
+      ? accountSelector(state, { accountId: account.parentId })
+      : undefined,
+  );
+  const parentAleoResources = getAleoResources(parentAccount);
+
   if (account.type === "TokenAccount" && config?.enableTokens) {
     const formattedTransparentBalance = formatCurrencyUnit(
       unit,
       account.spendableBalance,
       formatConfig,
     );
+
+    // Match on contractAddress instead of id — the id encodes the parent account's ledgerAccountId
+    // which may differ between public and private sync paths (viewKey presence), causing a lookup miss.
+    const privateTokenBalance =
+      parentAleoResources?.lastPrivateSyncDate &&
+      parentAleoResources.privateTokenBalances?.find(
+        e => e.contractAddress === account.token.contractAddress,
+      )?.balance;
+
+    const formattedPrivateTokenBalance = privateTokenBalance
+      ? formatCurrencyUnit(unit, privateTokenBalance, formatConfig)
+      : PRIVATE_BALANCE_PLACEHOLDER;
 
     return (
       <Wrapper>
@@ -188,7 +214,7 @@ const AccountBalanceSummaryFooter = ({ account }: Readonly<Props>) => {
             </TitleWrapper>
           </ToolTip>
           <AmountValue>
-            <Discreet>{PRIVATE_BALANCE_PLACEHOLDER}</Discreet>
+            <Discreet>{formattedPrivateTokenBalance}</Discreet>
           </AmountValue>
         </BalanceDetail>
       </Wrapper>

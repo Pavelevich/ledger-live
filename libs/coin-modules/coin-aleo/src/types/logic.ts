@@ -17,6 +17,17 @@ export interface AleoUnspentRecord extends AleoPrivateRecord {
   decryptedData: AleoDecryptedRecordResponse;
 }
 
+export interface AleoPrivateTokenBalance {
+  /** Token sub-account id (encodeTokenAccountId result). */
+  id: string;
+  /** Contract address — token_id for registry tokens, program_name for custom tokens. */
+  contractAddress: string;
+  /** Sum of token amounts from all unspent private records. */
+  balance: BigNumber;
+  /** Unspent private records whose amounts contribute to balance. */
+  unspentRecords: AleoPrivateRecord[];
+}
+
 export type EnrichedPrivateRecord = {
   rawRecord: AleoPrivateRecord;
   details: AleoPublicTransactionDetailsResponse;
