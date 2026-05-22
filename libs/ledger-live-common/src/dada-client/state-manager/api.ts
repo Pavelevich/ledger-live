@@ -8,6 +8,7 @@ import {
 import { convertApiAssets } from "@ledgerhq/cryptoassets";
 import { RawApiResponse, AssetsData } from "../entities";
 import { getEnv } from "@ledgerhq/live-env";
+import { injectAleoMockData } from "./aleo.mock";
 import {
   AssetsAdditionalData,
   AssetsDataTags,

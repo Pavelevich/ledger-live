@@ -9880,6 +9880,40 @@
       "title": "We can't create a new Aleo account",
       "description": "New Aleo accounts must be created outside Ledger Wallet using an external service. Once your account exists, you can add it here.",
       "link": "Learn how to create an Aleo account"
+    },
+    "accountActions": {
+      "selfTransfer": {
+        "button": "Self Transfer"
+      }
+    },
+    "selfTransfer": {
+      "modal": {
+        "title": "Self Transfer ALEO",
+        "stepRecipient": {
+          "selectLabel": "Choose a conversion type",
+          "publicToPrivate": "Public → Private",
+          "privateToPublic": "Private → Public"
+        }
+      }
+    },
+    "send": {
+      "balanceSelector": {
+        "label": "Send from",
+        "public": "Public balance",
+        "private": "Private balance",
+        "lastSync": "Last synced: {{date}}",
+        "notSynced": "Not yet synced"
+      },
+      "recordPicker": {
+        "title": "Select records",
+        "placeholder": {
+          "title": "Select records to spend",
+          "description": "Records are required to send from your private balance. Sync your account to load available records."
+        }
+      },
+      "selfTransfer": {
+        "button": "Self Transfer"
+      }
     }
   }
 }
