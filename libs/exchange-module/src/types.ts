@@ -405,6 +405,8 @@ export type CustomSwapParams = {
 export type CustomSwapResult = {
   /** Hash of the broadcast-and-confirmed approval transaction, when one was needed. */
   approvalTxHash?: string;
+  /** Hash of the broadcast-and-confirmed swap transaction, when the swap step ran. */
+  swapTxHash?: string;
 };
 
 /** Error rows returned next to quotes (swap API error objects). */
