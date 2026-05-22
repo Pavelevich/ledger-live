@@ -16,6 +16,7 @@ import AddAccountsSuccess from "./screens/AddAccountSuccess";
 import AddAccountsWarning from "./screens/AddAccountWarning";
 import NoAssociatedAccountsView from "./screens/NoAssociatedAccountsView";
 import CantonOnboardNavigator from "~/families/canton/Onboard/Onboard";
+import AleoAddAccountNavigator from "~/families/aleo/AddAccountFlow/AleoAddAccountNavigator";
 import CloseWithConfirmation from "LLM/components/CloseWithConfirmation";
 import {
   BaseComposite,
@@ -32,6 +33,7 @@ import TransparentHeaderNavigationOptions from "~/navigation/TransparentHeaderNa
 type NavigationProps = BaseComposite<
   StackNavigatorProps<AddAccountsNavigatorParamList, NavigatorName.AddAccounts>
 >;
+
 export default function Navigator() {
   const { colors } = useTheme();
   const route = useRoute<NavigationProps["route"]>();
@@ -118,6 +120,11 @@ export default function Navigator() {
       <Stack.Screen
         name={ScreenName.CantonOnboardAccount}
         component={CantonOnboardNavigator}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name={ScreenName.AleoOnboardAccount}
+        component={AleoAddAccountNavigator}
         options={{ headerShown: false }}
       />
       <Stack.Screen

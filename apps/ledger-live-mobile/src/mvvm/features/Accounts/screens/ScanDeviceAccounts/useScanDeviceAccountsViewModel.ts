@@ -231,6 +231,16 @@ export default function useScanDeviceAccountsViewModel({
       }
     }
 
+    if (isCryptoCurrency(currency) && currency.family === "aleo") {
+      navigation.replace(ScreenName.AleoOnboardAccount, {
+        accountsToAdd,
+        currency,
+        device: route.params.device,
+      });
+
+      return;
+    }
+
     setIsAddinAccounts(true);
 
     dispatch(
