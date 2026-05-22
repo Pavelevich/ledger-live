@@ -2,6 +2,7 @@ import React, { useCallback, useMemo } from "react";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { DomainServiceProvider } from "@ledgerhq/domain-service/hooks/index";
 import type { Account, AccountLike } from "@ledgerhq/types-live";
+import { getMainAccount } from "@ledgerhq/live-common/account/helpers";
 import {
   SEND_FLOW_STEP,
   type SendFlowStep,
@@ -17,8 +18,9 @@ import { AmountScreen } from "./screens/Amount";
 import { ConfirmationScreen } from "./screens/Confirmation";
 import { SignatureScreen } from "./screens/Signature";
 import { CoinControlScreen } from "./screens/CoinControl";
+import { aleoSendStepRegistry } from "~/families/aleo/send";
 
-const stepRegistry: StepRegistry<SendFlowStep> = {
+const baseStepRegistry: StepRegistry<SendFlowStep> = {
   [SEND_FLOW_STEP.RECIPIENT]: RecipientScreen,
   [SEND_FLOW_STEP.RECENT_HISTORY]: () => <></>,
   [SEND_FLOW_STEP.AMOUNT]: AmountScreen,
@@ -26,6 +28,14 @@ const stepRegistry: StepRegistry<SendFlowStep> = {
   [SEND_FLOW_STEP.COIN_CONTROL]: CoinControlScreen,
   [SEND_FLOW_STEP.SIGNATURE]: SignatureScreen,
   [SEND_FLOW_STEP.CONFIRMATION]: ConfirmationScreen,
+};
+
+const perFamilyStepRegistry: Partial<Record<string, Partial<StepRegistry<SendFlowStep>>>> = {
+  aleo: aleoSendStepRegistry,
+};
+
+const hasFamilyStepRegistry = (family: string): family is keyof typeof perFamilyStepRegistry => {
+  return family in perFamilyStepRegistry;
 };
 
 type SendWorkflowParams = Readonly<{
@@ -49,11 +59,15 @@ type SendWorkflowRouteParams = {
   fromMAD?: boolean;
 };
 
+const isSendWorkflowRouteParams = (value: unknown): value is SendWorkflowRouteParams => {
+  return typeof value === "object" && value !== null;
+};
+
 export default function SendWorkflow() {
   const route = useRoute();
   const navigation = useNavigation();
 
-  const routeParams = route.params as SendWorkflowRouteParams | undefined;
+  const routeParams = isSendWorkflowRouteParams(route.params) ? route.params : undefined;
 
   const { onClose, params } = routeParams || {};
 
@@ -77,6 +91,27 @@ export default function SendWorkflow() {
     }),
     [params, routeParams],
   );
+
+  // Merge base steps with optional family-specific overrides.
+  const stepRegistry = useMemo(() => {
+    const account = initParams.account;
+
+    if (!account) {
+      return baseStepRegistry;
+    }
+
+    const mainAccount = getMainAccount(account, initParams.parentAccount);
+    const family = mainAccount.currency.family;
+
+    if (!family || !hasFamilyStepRegistry(family)) {
+      return baseStepRegistry;
+    }
+
+    return {
+      ...baseStepRegistry,
+      ...perFamilyStepRegistry[family],
+    };
+  }, [initParams.account, initParams.parentAccount]);
 
   return (
     <DomainServiceProvider>

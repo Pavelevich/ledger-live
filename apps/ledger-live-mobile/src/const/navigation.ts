@@ -152,6 +152,8 @@ export enum ScreenName {
   SendFlowCustomFees = "SendFlowCustomFees",
   SendFlowCoinControl = "SendFlowCoinControl",
   SendFlowSignature = "SendFlowSignature",
+  AleoRecordPicker = "AleoRecordPicker",
+  AleoSelfTransfer = "AleoSelfTransfer",
   TransactionAlreadyValidatedError = "TransactionAlreadyValidatedError",
   SendValidationSuccess = "SendValidationSuccess",
   SettingsScreen = "SettingsScreen",

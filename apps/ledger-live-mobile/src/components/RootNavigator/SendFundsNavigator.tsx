@@ -7,6 +7,7 @@ import { ScreenName } from "~/const";
 import SendCoin from "~/screens/SelectAccount";
 import SendSelectRecipient from "~/screens/SendFunds/02-SelectRecipient";
 import SendAmountCoin from "~/screens/SendFunds/03a-AmountCoin";
+import AleoRecordPicker from "~/families/aleo/RecordPickerScreen";
 import SendSummary from "~/screens/SendFunds/04-Summary";
 import SelectDevice from "~/screens/SelectDevice";
 import SendConnectDevice from "~/screens/ConnectDevice";
@@ -62,6 +63,21 @@ export default function SendFundsNavigator() {
                 title={t("send.stepperHeader.recipientAddress")}
                 subtitle={t("send.stepperHeader.stepRange", {
                   currentStep: "2",
+                  totalSteps,
+                })}
+              />
+            ),
+          }}
+        />
+        <Stack.Screen
+          name={ScreenName.AleoRecordPicker}
+          component={AleoRecordPicker}
+          options={{
+            headerTitle: () => (
+              <StepHeader
+                title={t("aleo.send.recordPicker.title")}
+                subtitle={t("send.stepperHeader.stepRange", {
+                  currentStep: "3",
                   totalSteps,
                 })}
               />

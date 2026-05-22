@@ -68,6 +68,11 @@ export type SendFundsNavigatorStackParamList = {
     parentId?: string;
     transaction: Transaction;
   };
+  [ScreenName.AleoRecordPicker]: {
+    accountId: string;
+    parentId?: string;
+    transaction: Transaction;
+  };
   [ScreenName.SendSummary]: {
     accountId: string;
     parentId?: string;

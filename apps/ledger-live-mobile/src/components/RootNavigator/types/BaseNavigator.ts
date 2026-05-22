@@ -187,6 +187,7 @@ export type BaseNavigatorStackParamList = {
     transaction?: Transaction;
     justScanned?: boolean;
   };
+  [ScreenName.AleoSelfTransfer]: undefined;
   [ScreenName.BleDevicePairingFlow]: undefined;
   [ScreenName.AnalyticsAllocation]: undefined;
   [ScreenName.AnalyticsOperations]: {

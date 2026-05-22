@@ -184,6 +184,18 @@ export default function SendSelectRecipient({ route }: Props) {
     [],
   );
 
+  const specific =
+    perFamilySendSelectRecipient[
+      mainAccount.currency.family as keyof typeof perFamilySendSelectRecipient
+    ];
+
+  const getNextRecipientStep =
+    specific &&
+    "getNextRecipientStep" in specific &&
+    typeof specific.getNextRecipientStep === "function"
+      ? specific.getNextRecipientStep
+      : null;
+
   const onPressContinue = useCallback(() => {
     if (
       memoTag?.isEmpty &&
@@ -206,6 +218,16 @@ export default function SendSelectRecipient({ route }: Props) {
       });
     }
 
+    const nextRecipientStep = getNextRecipientStep?.({ transaction });
+
+    if (nextRecipientStep) {
+      return navigation.navigate(nextRecipientStep, {
+        accountId: account.id,
+        parentId: parentAccount?.id,
+        transaction,
+      });
+    }
+
     return navigation.navigate(ScreenName.SendAmountCoin, {
       accountId: account.id,
       parentId: parentAccount?.id,
@@ -215,6 +237,7 @@ export default function SendSelectRecipient({ route }: Props) {
     account,
     transaction,
     shouldSkipAmount,
+    getNextRecipientStep,
     navigation,
     parentAccount?.id,
     route.params,
@@ -232,16 +255,14 @@ export default function SendSelectRecipient({ route }: Props) {
       op.type === "IN" && !isConfirmedOperation(op, mainAccount, currencySettings.confirmationsNb),
   );
 
-  const specific =
-    perFamilySendSelectRecipient[
-      mainAccount.currency.family as keyof typeof perFamilySendSelectRecipient
-    ];
   const CustomRecipientAlert =
     specific && "StepRecipientCustomAlert" in specific ? specific.StepRecipientCustomAlert : null;
   const customSendRecipientCanNext =
     specific && "sendRecipientCanNext" in specific ? specific.sendRecipientCanNext : null;
   const SendRecipientFields =
     specific && "SendRecipientFields" in specific ? specific.SendRecipientFields : null;
+  const StepRecipientExtraContent =
+    specific && "StepRecipientExtraContent" in specific ? specific.StepRecipientExtraContent : null;
 
   const customValidationSuccess = customSendRecipientCanNext?.(status) ?? true;
   const isContinueDisabled =
@@ -315,6 +336,16 @@ export default function SendSelectRecipient({ route }: Props) {
                 </View>
               </View>
             ) : null}
+
+            {StepRecipientExtraContent && (
+              <StepRecipientExtraContent
+                account={mainAccount}
+                parentAccount={parentAccount}
+                transaction={transaction}
+                status={status}
+                setTransaction={setTransaction}
+              />
+            )}
 
             <Button
               event="SendRecipientQR"
