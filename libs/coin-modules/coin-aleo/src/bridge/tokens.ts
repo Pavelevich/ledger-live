@@ -5,7 +5,7 @@ import { encodeTokenAccountId, emptyHistoryCache } from "@ledgerhq/ledger-wallet
 import { encodeOperationId } from "@ledgerhq/ledger-wallet-framework/operation";
 import type { AleoVerifiedToken, AleoPrivateRecord } from "../types/api";
 import type { AleoOperation, AleoOperationExtra } from "../types/bridge";
-import type { AleoPrivateTokenBalance } from "../types/logic";
+import type { AleoPrivateTokenBalance, AleoUnspentTokenRecord } from "../types/logic";
 import { apiClient } from "../network/api";
 import { sdkClient } from "../network/sdk";
 import { PROGRAM_ID } from "../constants";
@@ -572,7 +572,12 @@ export async function getPrivateTokenBalances({
     const id = encodeTokenAccountId(ledgerAccountId, tokenCurrency);
     const entry = getOrCreateEntry(id, tokenCurrency.contractAddress);
     entry.balance = entry.balance.plus(amount);
-    entry.unspentRecords.push(record);
+    const enrichedRecord: AleoUnspentTokenRecord = {
+      ...record,
+      amount: amount.toString(),
+      decryptedData: decrypted,
+    };
+    entry.unspentRecords.push(enrichedRecord);
   });
 
   // token_registry.aleo records — decrypt to get both token_id and amount
@@ -599,7 +604,12 @@ export async function getPrivateTokenBalances({
     const id = encodeTokenAccountId(ledgerAccountId, tokenCurrency);
     const entry = getOrCreateEntry(id, tokenCurrency.contractAddress);
     entry.balance = entry.balance.plus(amount);
-    entry.unspentRecords.push(record);
+    const enrichedRecord: AleoUnspentTokenRecord = {
+      ...record,
+      amount: amount.toString(),
+      decryptedData: decrypted,
+    };
+    entry.unspentRecords.push(enrichedRecord);
   });
 
   return [...entriesById.values()];

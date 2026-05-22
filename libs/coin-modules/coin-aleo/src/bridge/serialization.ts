@@ -1,7 +1,7 @@
 import BigNumber from "bignumber.js";
 import type { AccountRaw, Account } from "@ledgerhq/types-live";
 import type { AleoAccount, AleoAccountRaw, AleoResources, AleoResourcesRaw } from "../types";
-import type { AleoPrivateRecord } from "../types/api";
+import type { AleoPrivateTokenBalanceRaw } from "../types/logic";
 
 export function toAleoResourcesRaw(resources: AleoResources): AleoResourcesRaw {
   return {
@@ -16,12 +16,14 @@ export function toAleoResourcesRaw(resources: AleoResources): AleoResourcesRaw {
       : null,
     privateTokenBalances: resources.privateTokenBalances
       ? JSON.stringify(
-          resources.privateTokenBalances.map(entry => ({
-            id: entry.id,
-            contractAddress: entry.contractAddress,
-            balance: entry.balance.toString(),
-            unspentRecords: entry.unspentRecords,
-          })),
+          resources.privateTokenBalances.map(
+            (entry): AleoPrivateTokenBalanceRaw => ({
+              id: entry.id,
+              contractAddress: entry.contractAddress,
+              balance: entry.balance.toString(),
+              unspentRecords: entry.unspentRecords,
+            }),
+          ),
         )
       : null,
     ...(resources.hasMigratedPublicTokens !== undefined && {
@@ -45,19 +47,12 @@ export function fromAleoResourcesRaw(rawResources: AleoResourcesRaw): AleoResour
       ? JSON.parse(rawResources.unspentPrivateRecords)
       : null,
     privateTokenBalances: rawResources.privateTokenBalances
-      ? JSON.parse(rawResources.privateTokenBalances).map(
-          (entry: {
-            id: string;
-            contractAddress: string;
-            balance: string;
-            unspentRecords: AleoPrivateRecord[];
-          }) => ({
-            id: entry.id,
-            contractAddress: entry.contractAddress,
-            balance: new BigNumber(entry.balance),
-            unspentRecords: entry.unspentRecords,
-          }),
-        )
+      ? JSON.parse(rawResources.privateTokenBalances).map((entry: AleoPrivateTokenBalanceRaw) => ({
+          id: entry.id,
+          contractAddress: entry.contractAddress,
+          balance: new BigNumber(entry.balance),
+          unspentRecords: entry.unspentRecords,
+        }))
       : null,
     ...(rawResources.hasMigratedPublicTokens !== undefined && {
       hasMigratedPublicTokens: rawResources.hasMigratedPublicTokens,
