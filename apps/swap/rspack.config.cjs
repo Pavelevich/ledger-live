@@ -1,5 +1,21 @@
-const path = require('path');
-const Repack = require('@callstack/repack');
+const fs = require("fs");
+const path = require("path");
+const Repack = require("@callstack/repack");
+
+// Re.Pack's dev server only serves files registered in `compilation.assets`.
+// @module-federation/dts-plugin writes `@mf-types.zip` straight to disk in dev
+// mode (it only emits as a compilation asset in prod), so Re.Pack returns 404.
+// This middleware bridges the gap by serving the zip from the build output dir.
+const MF_TYPES_URL_RE = /^\/(ios|android)\/@mf-types(\.zip|\.d\.ts)$/;
+function serveMfTypes(req, res, next) {
+  const match = req.url && req.url.match(MF_TYPES_URL_RE);
+  if (!match) return next();
+  const [, platform, ext] = match;
+  const file = path.join(__dirname, "build", "swap", platform, `@mf-types${ext}`);
+  if (!fs.existsSync(file)) return next();
+  res.setHeader("Content-Type", ext === ".zip" ? "application/zip" : "text/plain");
+  fs.createReadStream(file).pipe(res);
+}
 
 /**
  * Rspack configuration for RemoteApp federated module
@@ -7,31 +23,31 @@ const Repack = require('@callstack/repack');
  */
 module.exports = env => {
   const {
-    mode = 'development',
+    mode = "development",
     context = __dirname,
-    platform = process.env.PLATFORM || 'ios',
-    minimize = mode === 'production',
+    platform = process.env.PLATFORM || "ios",
+    minimize = mode === "production",
     devServer = undefined,
   } = env;
 
   if (!platform) {
-    throw new Error('Missing platform');
+    throw new Error("Missing platform");
   }
 
   return {
     mode,
     context,
-    entry: './index.js',
+    entry: "./index.js",
     resolve: {
       ...Repack.getResolveOptions(platform, { enablePackageExports: true }),
     },
     output: {
-      path: '[context]/build/swap/[platform]',
-      uniqueName: 'swap',
+      path: "[context]/build/swap/[platform]",
+      uniqueName: "swap",
     },
     optimization: {
       minimize,
-      chunkIds: 'named',
+      chunkIds: "named",
     },
     module: {
       rules: [
@@ -42,19 +58,19 @@ module.exports = env => {
         // (which uses hermes-parser) on RN packages first so SWC sees plain JS.
         {
           test: /\.jsx?$/,
-          include: Repack.getModulePaths(['react-native', '@react-native']),
-          enforce: 'pre',
+          include: Repack.getModulePaths(["react-native", "@react-native"]),
+          enforce: "pre",
           use: {
-            loader: '@callstack/repack/babel-loader',
+            loader: "@callstack/repack/babel-loader",
             options: {
-              presets: [require.resolve('@react-native/babel-preset')],
+              presets: [require.resolve("@react-native/babel-preset")],
             },
           },
         },
         ...Repack.getJsTransformRules({
           swc: {
             externalHelpers: false,
-            jsxRuntime: 'automatic',
+            jsxRuntime: "automatic",
           },
           flow: {
             enabled: false,
@@ -75,47 +91,40 @@ module.exports = env => {
         extraChunks: [
           {
             include: /.*/,
-            type: 'remote',
+            type: "remote",
             outputPath: `build/swap/${platform}/output-remote`,
           },
         ],
       }),
       new Repack.plugins.ModuleFederationPluginV2({
-        name: 'swap',
-        filename: 'swap.container.js.bundle',
+        name: "swap",
+        filename: "swap.container.js.bundle",
         exposes: {
-          './HelloWorld': './src/HelloWorld',
+          "./HelloWorld": "./src/HelloWorld",
         },
-        dts: false,
+        dts: {
+          generateTypes: {
+            tsConfigPath: "./tsconfig.json",
+            compileInChildProcess: true,
+            generateAPITypes: true,
+          },
+          consumeTypes: false,
+        },
         shared: {
-          react: {
-            singleton: true,
-            requiredVersion: '19.1.4',
-          },
-          'react-native': {
-            singleton: true,
-            requiredVersion: '0.81.6',
-          },
-          'react-redux': {
-            singleton: true,
-            eager: false,
-            requiredVersion: '9.2.0',
-          },
-          '@reduxjs/toolkit': {
-            singleton: true,
-            eager: false,
-            requiredVersion: '2.11.2',
-          },
-          '@shared/mobile-host-runtime': {
-            singleton: true,
-            eager: false,
-            requiredVersion: '0.1.0',
-          },
+          react: { singleton: true, eager: true, requiredVersion: "^19.0.0" },
+          "react-native": { singleton: true, eager: true, requiredVersion: "*" },
+          "react-redux": { singleton: true, requiredVersion: "^9.0.0" },
+          "@reduxjs/toolkit": { singleton: true, requiredVersion: "^2.0.0" },
+          "@shared/mobile-host-runtime": { singleton: true, requiredVersion: "*" },
         },
       }),
     ],
     devServer: {
       port: 9000,
+      setupMiddlewares: middlewares => {
+        middlewares.unshift(serveMfTypes);
+        return middlewares;
+      },
     },
   };
 };

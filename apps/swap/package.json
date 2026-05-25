@@ -21,6 +21,7 @@
     "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.25.0",
     "@callstack/repack": "5.2.3",
+    "@react-native/babel-plugin-codegen": "catalog:",
     "@react-native/babel-preset": "catalog:",
     "@module-federation/enhanced": "2.5.0",
     "@react-native/community-cli-plugin": "0.81.6",

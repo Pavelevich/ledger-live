@@ -2386,6 +2386,9 @@ importers:
       '@react-native-community/cli-platform-ios':
         specifier: 'catalog:'
         version: 18.0.1
+      '@react-native/babel-plugin-codegen':
+        specifier: 'catalog:'
+        version: 0.81.6(@babel/core@7.28.5)
       '@react-native/babel-preset':
         specifier: 'catalog:'
         version: 0.81.6(@babel/core@7.28.5)

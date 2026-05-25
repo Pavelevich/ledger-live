@@ -277,33 +277,19 @@ export default withRozeniteUrlFix(
             remotes: {
               swap: `swap@http://localhost:9000/${platform}/mf-manifest.json`,
             },
-            dts: false,
+            dts: {
+              consumeTypes: {
+                consumeAPITypes: true,
+                abortOnError: false,
+              },
+              generateTypes: false,
+            },
             shared: {
-              react: {
-                singleton: true,
-                eager: true,
-                requiredVersion: "19.0.0",
-              },
-              "react-native": {
-                singleton: true,
-                eager: true,
-                requiredVersion: "0.79.7",
-              },
-              "react-redux": {
-                singleton: true,
-                eager: true,
-                requiredVersion: "9.2.0",
-              },
-              "@reduxjs/toolkit": {
-                singleton: true,
-                eager: true,
-                requiredVersion: "2.11.2",
-              },
-              "@shared/mobile-host-runtime": {
-                singleton: true,
-                eager: true,
-                requiredVersion: "0.1.0",
-              },
+              react: { singleton: true, eager: true },
+              "react-native": { singleton: true, eager: true },
+              "react-redux": { singleton: true, eager: true },
+              "@reduxjs/toolkit": { singleton: true, eager: true },
+              "@shared/mobile-host-runtime": { singleton: true, eager: true },
             },
           }),
           new ExpoModulesPlugin(),
@@ -314,6 +300,9 @@ export default withRozeniteUrlFix(
         ],
         stats: "errors-warnings",
         infrastructureLogging: { level: "warn" },
+        watchOptions: {
+          ignored: ["**/node_modules/**", "**/@mf-types/**"],
+        },
         devServer: {
           host: "local-ip",
           hot: true,
