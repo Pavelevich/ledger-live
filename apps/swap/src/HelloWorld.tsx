@@ -1,54 +1,21 @@
-import React from 'react';
-import {View, Text, StyleSheet, Switch} from 'react-native';
-import {useSelector} from 'react-redux';
-import {useState} from 'react';
+import React, {lazy, Suspense} from 'react';
+import {Text} from 'react-native';
+
+// Async boundary for Module Federation: the exposed entry only imports
+// `react`/`react-native` (shared eagerly by the host). The implementation —
+// which pulls in `react-redux`, `@reduxjs/toolkit` and `@shared/mobile-host-runtime`
+// (declared non-eager) — is lazily imported so Federation can populate the
+// shared scope before evaluating it.
+const Impl = lazy(() => import('./HelloWorld.impl'));
 
 interface HelloWorldProps {
   name?: string;
 }
 
-const HelloWorld: React.FC<HelloWorldProps> = () => {
-  const [isEnabled, setIsEnabled] = useState(false);
-  const accounts = useSelector(state => state.accounts.active);
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>My Wallet</Text>
-      <Switch
-        ios_backgroundColor="#3e3e3e"
-        onValueChange={setIsEnabled}
-        value={isEnabled}
-      />
-      {accounts.map((account, index) => (
-        <Text key={index} style={styles.subtitle}>
-          {account.currency.name}: {account.balance.toNumber()}
-        </Text>
-      ))}
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-    margin: 16,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#558B2F',
-    fontStyle: 'italic',
-  },
-});
+const HelloWorld: React.FC<HelloWorldProps> = props => (
+  <Suspense fallback={<Text>Loading swap…</Text>}>
+    <Impl {...props} />
+  </Suspense>
+);
 
 export default HelloWorld;

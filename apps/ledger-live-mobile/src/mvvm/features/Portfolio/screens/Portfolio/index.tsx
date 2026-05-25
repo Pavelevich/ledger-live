@@ -148,7 +148,7 @@ export const PortfolioScreen = ({ navigation }: NavigationProps) => {
     }
 
     sections.push(<PortfolioPerpsEntryPoint key="perpsEntryPoint" />);
-    console.log(HelloWorld);
+
     sections.push(<Suspense fallback={<Text>Loading...</Text>}><HelloWorld /></Suspense>);
     if (shouldDisplayAssetSection) {
       sections.push(<WalletAssetsView key="categorizedAssets" />);
