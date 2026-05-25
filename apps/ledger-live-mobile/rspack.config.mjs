@@ -275,7 +275,7 @@ export default withRozeniteUrlFix(
             name: "HostApp",
             filename: "HostApp.container.js.bundle",
             remotes: {
-              RemoteApp: `RemoteApp@http://localhost:9000/${platform}/mf-manifest.json`,
+              swap: `swap@http://localhost:9000/${platform}/mf-manifest.json`,
             },
             dts: false,
             shared: {
@@ -298,6 +298,11 @@ export default withRozeniteUrlFix(
                 singleton: true,
                 eager: true,
                 requiredVersion: "2.11.2",
+              },
+              "@shared/mobile-host-runtime": {
+                singleton: true,
+                eager: true,
+                requiredVersion: "0.1.0",
               },
             },
           }),

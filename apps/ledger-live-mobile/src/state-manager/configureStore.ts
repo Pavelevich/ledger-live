@@ -14,6 +14,7 @@ import { createIdentitiesSyncMiddleware } from "@ledgerhq/client-ids/store";
 import { State } from "~/reducers/types";
 import { canPushDeviceIdsSelector } from "~/reducers/settings";
 import { createFeatureFlagsMiddleware } from "@shared/feature-flags";
+import { reducerRegistry } from "@shared/mobile-host-runtime";
 import { fetchRemoteFlags } from "~/firebase/remoteConfig";
 
 export const store = configureStore({
@@ -50,6 +51,8 @@ export const store = configureStore({
 
 export type StoreType = typeof store;
 export type AppDispatch = typeof store.dispatch;
+
+reducerRegistry.attachStore(store);
 
 setupListeners(store.dispatch, (dispatch, { onOnline, onOffline }) => {
   const unsubscribe = NetInfo.addEventListener(state => {

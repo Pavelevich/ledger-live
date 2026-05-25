@@ -43,7 +43,7 @@ import { Box } from "@ledgerhq/native-ui";
 
 import { Text } from "react-native";
 
-const HelloWorld = lazy(() => import("RemoteApp/HelloWorld"));
+const HelloWorld = lazy(() => import("swap/HelloWorld"));
 
 type NavigationProps = BaseComposite<
   StackNavigatorProps<WalletTabNavigatorStackParamList, ScreenName.Portfolio>
