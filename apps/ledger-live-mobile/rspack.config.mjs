@@ -185,10 +185,6 @@ export default withRozeniteUrlFix(
         mode,
         context: __dirname,
         entry: "./index.js",
-        // Mobile uses a single Hermes bytecode bundle — async chunks are not supported
-        // and hurt performance with Hermes. Disable async chunk creation globally.
-        // When running rsdoctor, also emit main bundle as .js so it's counted as JavaScript (not Other)
-        output: { asyncChunks: false, ...(isRsdoctor && { filename: "[name].js" }) },
         resolve: {
           ...Repack.getResolveOptions(platform, {
             enablePackageExports: true,
@@ -274,6 +270,36 @@ export default withRozeniteUrlFix(
           }),
           new ReanimatedPlugin({
             unstable_disableTransform: true,
+          }),
+           new Repack.plugins.ModuleFederationPluginV2({
+            name: "HostApp",
+            filename: "HostApp.container.js.bundle",
+            remotes: {
+              RemoteApp: `RemoteApp@http://localhost:9000/${platform}/mf-manifest.json`,
+            },
+            dts: false,
+            shared: {
+              react: {
+                singleton: true,
+                eager: true,
+                requiredVersion: "19.0.0",
+              },
+              "react-native": {
+                singleton: true,
+                eager: true,
+                requiredVersion: "0.79.7",
+              },
+              "react-redux": {
+                singleton: true,
+                eager: true,
+                requiredVersion: "9.2.0",
+              },
+              "@reduxjs/toolkit": {
+                singleton: true,
+                eager: true,
+                requiredVersion: "2.11.2",
+              },
+            },
           }),
           new ExpoModulesPlugin(),
           new rspack.ProvidePlugin({
