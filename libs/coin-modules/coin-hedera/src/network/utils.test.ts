@@ -363,6 +363,7 @@ describe("network utils", () => {
 
       expect(hgraphClient.getERC20Balances).toHaveBeenCalledTimes(1);
       expect(hgraphClient.getERC20Balances).toHaveBeenCalledWith({
+        configOrCurrencyId: mockCurrency.id,
         address: mockAccount.freshAddress,
       });
       expect(res).toEqual([
