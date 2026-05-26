@@ -1,6 +1,6 @@
-import {createSlice, PayloadAction} from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-export const SWAP_SLICE_NAME = 'swap';
+export const SWAP_SLICE_NAME = "swap";
 
 export interface SwapState {
   clickCount: number;
@@ -16,7 +16,7 @@ const swapSlice = createSlice({
   name: SWAP_SLICE_NAME,
   initialState: INITIAL_STATE,
   reducers: {
-    recordSwapClick: (state, action: PayloadAction<{at: string}>) => {
+    recordSwapClick: (state, action: PayloadAction<{ at: string }>) => {
       state.clickCount += 1;
       state.lastClickedAt = action.payload.at;
     },
@@ -24,9 +24,9 @@ const swapSlice = createSlice({
   },
 });
 
-export const {recordSwapClick, resetSwap} = swapSlice.actions;
+export const { recordSwapClick, resetSwap } = swapSlice.actions;
 
-export const swapStateSelector = (state: {swap?: SwapState}): SwapState =>
+export const swapStateSelector = (state: { swap?: SwapState }): SwapState =>
   state.swap ?? INITIAL_STATE;
 
 export default swapSlice.reducer;

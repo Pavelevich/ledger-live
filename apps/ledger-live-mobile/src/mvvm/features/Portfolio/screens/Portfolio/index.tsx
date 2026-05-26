@@ -151,7 +151,7 @@ export const PortfolioScreen = ({ navigation }: NavigationProps) => {
 
     sections.push(
       <Suspense fallback={<Text>Loading...</Text>}>
-        <HelloWorld name="test" />
+        <HelloWorld name="test"/>
       </Suspense>,
     );
     if (shouldDisplayAssetSection) {

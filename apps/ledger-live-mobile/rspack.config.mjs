@@ -284,6 +284,15 @@ export default withRozeniteUrlFix(
               },
               generateTypes: false,
             },
+            // The dynamic-remote-type-hints runtime plugin opens a WebSocket via
+            // `isomorphic-ws`, which under Hermes/RN resolves to a value whose
+            // `prototype` is undefined and crashes the host bundle at init.
+            // `dev` is a top-level MF option, sibling of `dts`.
+            dev: {
+              disableDynamicRemoteTypeHints: true,
+              disableHotTypesReload: true,
+              disableLiveReload: true,
+            },
             shared: {
               react: { singleton: true, eager: true },
               "react-native": { singleton: true, eager: true },

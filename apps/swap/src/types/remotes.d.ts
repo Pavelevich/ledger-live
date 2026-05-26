@@ -5,8 +5,8 @@
  * proper TypeScript support when consuming this module.
  */
 
-declare module 'RemoteApp/HelloWorld' {
-  import {FC} from 'react';
+declare module "RemoteApp/HelloWorld" {
+  import { FC } from "react";
 
   interface HelloWorldProps {
     /**
@@ -21,6 +21,6 @@ declare module 'RemoteApp/HelloWorld' {
 }
 
 // Re-export for convenience
-declare module 'RemoteApp' {
-  export * from 'RemoteApp/HelloWorld';
+declare module "RemoteApp" {
+  export * from "RemoteApp/HelloWorld";
 }

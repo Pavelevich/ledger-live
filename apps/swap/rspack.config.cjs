@@ -110,6 +110,14 @@ module.exports = env => {
           },
           consumeTypes: false,
         },
+        // The dynamic-remote-type-hints runtime plugin opens a WebSocket via
+        // `isomorphic-ws`, which crashes under Hermes/RN. `dev` is a top-level
+        // MF option, sibling of `dts`.
+        dev: {
+          disableDynamicRemoteTypeHints: true,
+          disableHotTypesReload: true,
+          disableLiveReload: true,
+        },
         shared: {
           react: { singleton: true, eager: true, requiredVersion: "^19.0.0" },
           "react-native": { singleton: true, eager: true, requiredVersion: "*" },
