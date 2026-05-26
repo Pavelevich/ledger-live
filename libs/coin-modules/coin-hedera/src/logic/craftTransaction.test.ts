@@ -1,7 +1,6 @@
 import * as sdk from "@hashgraph/sdk";
 import type { FeeEstimation, TransactionIntent } from "@ledgerhq/coin-module-framework/api/index";
 import invariant from "invariant";
-import { getMockedConfig } from "../test/fixtures/config.fixture";
 import {
   HEDERA_TRANSACTION_MODES,
   TINYBAR_SCALE,
@@ -9,21 +8,33 @@ import {
 } from "../constants";
 import { apiClient } from "../network/api";
 import { rpcClient } from "../network/rpc";
+import { toEVMAddress } from "../network/utils";
+import { getMockedConfig } from "../test/fixtures/config.fixture";
 import type { HederaMemo, HederaTxData } from "../types";
 import { craftTransaction } from "./craftTransaction";
-import { serializeTransaction, toEVMAddress } from "./utils";
+import { serializeTransaction } from "./utils";
 
-jest.mock("./utils");
+jest.mock("./utils", () => ({
+  ...jest.requireActual("./utils"),
+  serializeTransaction: jest.fn(),
+}));
 jest.mock("../network/rpc", () => ({
   rpcClient: require("../test/fixtures/rpc.fixture").getMockedRpcClient(),
 }));
+jest.mock("../network/utils", () => ({
+  ...jest.requireActual("../network/utils"),
+  toEVMAddress: jest.fn(),
+}));
+
+const mockToEVMAddress = jest.mocked(toEVMAddress);
+const mockSerializeTransaction = jest.mocked(serializeTransaction);
 
 describe("craftTransaction", () => {
-  const defaultConfig = getMockedConfig();
+  const mockConfig = { ...getMockedConfig(), useNetworkTimestamp: false };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (serializeTransaction as jest.Mock).mockReturnValue("serialized-transaction");
+    mockSerializeTransaction.mockReturnValue("serialized-transaction");
   });
 
   afterAll(async () => {
@@ -51,7 +62,10 @@ describe("craftTransaction", () => {
       },
     } satisfies TransactionIntent<HederaMemo>;
 
-    const result = await craftTransaction({ txIntent, config: defaultConfig });
+    const result = await craftTransaction({
+      configOrCurrencyId: mockConfig,
+      txIntent,
+    });
 
     expect(result.tx).toBeInstanceOf(sdk.TransferTransaction);
     invariant(result.tx instanceof sdk.TransferTransaction, "TransferTransaction type guard");
@@ -88,7 +102,10 @@ describe("craftTransaction", () => {
       },
     } satisfies TransactionIntent<HederaMemo>;
 
-    const result = await craftTransaction({ txIntent, config: defaultConfig });
+    const result = await craftTransaction({
+      configOrCurrencyId: mockConfig,
+      txIntent,
+    });
 
     expect(result.tx).toBeInstanceOf(sdk.TransferTransaction);
     invariant(result.tx instanceof sdk.TransferTransaction, "TransferTransaction type guard");
@@ -108,7 +125,7 @@ describe("craftTransaction", () => {
   });
 
   it("should craft ERC20 token transfer transaction", async () => {
-    (toEVMAddress as jest.Mock).mockResolvedValue("0x0000000000000000000000000000000000003039");
+    mockToEVMAddress.mockResolvedValue("0x0000000000000000000000000000000000003039");
 
     const txIntent = {
       intentType: "transaction",
@@ -131,7 +148,10 @@ describe("craftTransaction", () => {
       },
     } satisfies TransactionIntent<HederaMemo, HederaTxData>;
 
-    const result = await craftTransaction({ txIntent, config: defaultConfig });
+    const result = await craftTransaction({
+      configOrCurrencyId: mockConfig,
+      txIntent,
+    });
 
     expect(result.tx).toBeInstanceOf(sdk.ContractExecuteTransaction);
     invariant(
@@ -169,7 +189,10 @@ describe("craftTransaction", () => {
       },
     } satisfies TransactionIntent<HederaMemo>;
 
-    const result = await craftTransaction({ txIntent, config: defaultConfig });
+    const result = await craftTransaction({
+      configOrCurrencyId: mockConfig,
+      txIntent,
+    });
 
     expect(result.tx).toBeInstanceOf(sdk.TokenAssociateTransaction);
     invariant(
@@ -193,6 +216,7 @@ describe("craftTransaction", () => {
     };
 
     const result = await craftTransaction({
+      configOrCurrencyId: mockConfig,
       txIntent: {
         intentType: "transaction",
         type: HEDERA_TRANSACTION_MODES.Send,
@@ -209,7 +233,6 @@ describe("craftTransaction", () => {
         },
       },
       customFees,
-      config: defaultConfig,
     });
 
     expect(result.tx).toBeInstanceOf(sdk.TransferTransaction);
@@ -234,7 +257,7 @@ describe("craftTransaction", () => {
       },
     } satisfies TransactionIntent<HederaMemo>;
 
-    await expect(craftTransaction({ txIntent, config: defaultConfig })).rejects.toThrow(
+    await expect(craftTransaction({ txIntent, configOrCurrencyId: mockConfig })).rejects.toThrow(
       "hedera: invalid asset type",
     );
   });
@@ -256,7 +279,7 @@ describe("craftTransaction", () => {
       },
     } satisfies TransactionIntent<HederaMemo>;
 
-    await expect(craftTransaction({ txIntent, config: defaultConfig })).rejects.toThrow(
+    await expect(craftTransaction({ txIntent, configOrCurrencyId: mockConfig })).rejects.toThrow(
       "hedera: assetReference is missing",
     );
   });
@@ -278,7 +301,7 @@ describe("craftTransaction", () => {
       },
     } satisfies TransactionIntent<HederaMemo>;
 
-    await expect(craftTransaction({ txIntent, config: defaultConfig })).rejects.toThrow(
+    await expect(craftTransaction({ txIntent, configOrCurrencyId: mockConfig })).rejects.toThrow(
       "hedera: no assetReference in token transfer",
     );
   });
@@ -307,8 +330,8 @@ describe("craftTransaction", () => {
 
     const result = await craftTransaction({
       txIntent,
-      config: {
-        ...defaultConfig,
+      configOrCurrencyId: {
+        ...mockConfig,
         useNetworkTimestamp: true,
       },
     });
@@ -339,8 +362,8 @@ describe("craftTransaction", () => {
 
     const result = await craftTransaction({
       txIntent,
-      config: {
-        ...defaultConfig,
+      configOrCurrencyId: {
+        ...mockConfig,
         useNetworkTimestamp: true,
       },
     });
@@ -376,15 +399,15 @@ describe("craftTransaction", () => {
     const [withoutMirror, withMirror] = await Promise.all([
       craftTransaction({
         txIntent,
-        config: {
-          ...defaultConfig,
+        configOrCurrencyId: {
+          ...mockConfig,
           useNetworkTimestamp: false,
         },
       }),
       craftTransaction({
         txIntent,
-        config: {
-          ...defaultConfig,
+        configOrCurrencyId: {
+          ...mockConfig,
           useNetworkTimestamp: true,
         },
       }),

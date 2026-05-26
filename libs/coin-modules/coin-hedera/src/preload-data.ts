@@ -6,10 +6,14 @@ const initialData: HederaPreloadData = {
   validators: [],
 };
 
-const dataByCurrency = new Map<string, HederaPreloadData>([["hedera", initialData]]);
+const dataByCurrency = new Map<string, HederaPreloadData>([
+  ["hedera", initialData],
+  ["hedera_testnet", initialData],
+]);
 
 const dataUpdatesByCurrency = new Map([
   ["hedera", new BehaviorSubject<HederaPreloadData>(initialData)],
+  ["hedera_testnet", new BehaviorSubject<HederaPreloadData>(initialData)],
 ]);
 
 export function setHederaPreloadData(data: HederaPreloadData, currency: CryptoCurrency): void {
