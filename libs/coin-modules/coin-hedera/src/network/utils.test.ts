@@ -320,10 +320,11 @@ describe("network utils", () => {
       });
 
       expect(apiClient.getERC20Balance).toHaveBeenCalledTimes(mockedSupportedTokenIds.length);
-      expect(apiClient.getERC20Balance).toHaveBeenCalledWith(
-        mockAccount.freshAddress,
-        erc20Token.contractAddress,
-      );
+      expect(apiClient.getERC20Balance).toHaveBeenCalledWith({
+        configOrCurrencyId: mockCurrency.id,
+        accountEvmAddress: mockAccount.freshAddress,
+        contractEvmAddress: erc20Token.contractAddress,
+      });
 
       expect(res).toEqual(mockedResponse);
     });
@@ -434,14 +435,16 @@ describe("network utils", () => {
         },
       ]);
       expect(apiClient.getContractCallResult).toHaveBeenCalledTimes(1);
-      expect(apiClient.getContractCallResult).toHaveBeenCalledWith(
-        mockThirdwebTransaction.transactionHash,
-      );
+      expect(apiClient.getContractCallResult).toHaveBeenCalledWith({
+        configOrCurrencyId: mockCurrency.id,
+        transactionHash: mockThirdwebTransaction.transactionHash,
+      });
       expect(apiClient.findTransactionByContractCall).toHaveBeenCalledTimes(1);
-      expect(apiClient.findTransactionByContractCall).toHaveBeenCalledWith(
-        mockContractCallResult.timestamp,
-        mockTokenERC20.contractAddress,
-      );
+      expect(apiClient.findTransactionByContractCall).toHaveBeenCalledWith({
+        configOrCurrencyId: mockCurrency.id,
+        timestamp: mockContractCallResult.timestamp,
+        contractId: mockTokenERC20.contractAddress,
+      });
     });
 
     it("should skip transactions for tokens not found in currency list", async () => {
@@ -576,9 +579,13 @@ describe("network utils", () => {
         },
       ]);
       expect(apiClient.getContractCallResult).toHaveBeenCalledTimes(1);
-      expect(apiClient.getContractCallResult).toHaveBeenCalledWith("hash123");
+      expect(apiClient.getContractCallResult).toHaveBeenCalledWith({
+        configOrCurrencyId: mockCurrency.id,
+        transactionHash: mockMirrorTransaction.transaction_hash,
+      });
       expect(apiClient.findTransactionByContractCallV2).toHaveBeenCalledTimes(1);
       expect(apiClient.findTransactionByContractCallV2).toHaveBeenCalledWith({
+        configOrCurrencyId: mockCurrency.id,
         timestamp: "1704067200.000000000",
         payerAddress: `0.0.${payerAccountId}`,
       });
@@ -640,6 +647,7 @@ describe("network utils", () => {
 
       expect(apiClient.findTransactionByContractCallV2).toHaveBeenCalledTimes(1);
       expect(apiClient.findTransactionByContractCallV2).toHaveBeenCalledWith({
+        configOrCurrencyId: mockCurrency.id,
         timestamp: "1768092990.000000000",
         payerAddress: `0.0.${payerAccountId}`,
       });
@@ -737,7 +745,10 @@ describe("network utils", () => {
 
       await checkAccountTokenAssociationStatus(addressWithChecksum, htsToken);
       expect(apiClient.getAccount).toHaveBeenCalledTimes(1);
-      expect(apiClient.getAccount).toHaveBeenCalledWith("0.0.9124531");
+      expect(apiClient.getAccount).toHaveBeenCalledWith({
+        configOrCurrencyId: htsToken.parentCurrency.id,
+        address: "0.0.9124531",
+      });
     });
   });
 
@@ -800,7 +811,10 @@ describe("network utils", () => {
       });
 
       expect(apiClient.getAccount).toHaveBeenCalledTimes(1);
-      expect(apiClient.getAccount).toHaveBeenCalledWith(mockMirrorAccount.account);
+      expect(apiClient.getAccount).toHaveBeenCalledWith({
+        configOrCurrencyId: defaultConfig,
+        address: mockMirrorAccount.account,
+      });
       expect(evmAddress).toBe(mockMirrorAccount.evm_address);
     });
 
@@ -839,6 +853,7 @@ describe("network utils", () => {
       expect(result).toEqual(new BigNumber(0));
       expect(apiClient.getTransactionsByTimestampRange).toHaveBeenCalledTimes(1);
       expect(apiClient.getTransactionsByTimestampRange).toHaveBeenCalledWith({
+        configOrCurrencyId: defaultConfig,
         address: mockAddress,
         startTimestamp: `gt:${mockStartTimestamp}`,
         endTimestamp: `lte:${mockEndTimestamp}`,
@@ -973,8 +988,16 @@ describe("network utils", () => {
         stakedAmount: BigInt(1000),
       });
       expect(apiClient.getAccount).toHaveBeenCalledTimes(2);
-      expect(apiClient.getAccount).toHaveBeenCalledWith(mockAddress, `lt:${mockTimestamp}`);
-      expect(apiClient.getAccount).toHaveBeenCalledWith(mockAddress, `eq:${mockTimestamp}`);
+      expect(apiClient.getAccount).toHaveBeenCalledWith({
+        configOrCurrencyId: defaultConfig,
+        address: mockAddress,
+        timestamp: `lt:${mockTimestamp}`,
+      });
+      expect(apiClient.getAccount).toHaveBeenCalledWith({
+        configOrCurrencyId: defaultConfig,
+        address: mockAddress,
+        timestamp: `eq:${mockTimestamp}`,
+      });
     });
 
     it("detects UNDELEGATE operation when staking stops", async () => {
@@ -1060,6 +1083,7 @@ describe("network utils", () => {
 
       expect(apiClient.getTransactionsByTimestampRange).toHaveBeenCalledTimes(1);
       expect(apiClient.getTransactionsByTimestampRange).toHaveBeenCalledWith({
+        configOrCurrencyId: defaultConfig,
         address: mockAddress,
         startTimestamp: `gt:${mockAccountBefore.balance.timestamp}`,
         endTimestamp: `lte:${mockTimestamp}`,
