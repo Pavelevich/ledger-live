@@ -278,8 +278,7 @@ const api = {
   },
 
   /**
-   * Fetches FA2 token transfers (tokenId = 0 only) for a given account.
-   * This is limited to `token.standard=fa2` and `token.tokenId=0` on the TzKT API.
+   * Fetches FA2 token transfers for a given account.
    * Translates `query.sort` to TzKT's `sort.asc=id` / `sort.desc=id`.
    * The lower-level `getTokenTransfers` helper is a generic pass-through and does not pin the sort.
    * https://api.tzkt.io/#operation/Tokens_GetTokenTransfers
@@ -291,7 +290,6 @@ const api = {
     const sortKey = query.sort === "Descending" ? "sort.desc" : "sort.asc";
     const params: Record<string, unknown> = {
       "anyof.from.to": address,
-      "token.tokenId": "0",
       "token.standard": "fa2",
       [sortKey]: "id",
       limit: query.limit,
@@ -351,8 +349,8 @@ const api = {
   },
 
   /**
-   * Fetches FA token balances for a given account.
-   * When `tokenFilter` is omitted, only FA2 tokenId 0 balances are returned (legacy behaviour).
+   * Fetches FA2 token balances for a given account.
+   * When `tokenFilter` is omitted, all FA2 token balances are returned.
    * Pass `tokenFilter` to query a specific FA2 contract + token id (e.g. send-max for FA2).
    * https://api.tzkt.io/#operation/Tokens_GetTokenBalances
    */
@@ -367,8 +365,6 @@ const api = {
     if (tokenFilter) {
       params["token.contract"] = tokenFilter.contractAddress;
       params["token.tokenId"] = String(tokenFilter.tokenId);
-    } else {
-      params["token.tokenId"] = "0";
     }
     const { data } = await network<APITokenBalance[]>({
       url: `${getExplorerUrl()}/v1/tokens/balances`,
