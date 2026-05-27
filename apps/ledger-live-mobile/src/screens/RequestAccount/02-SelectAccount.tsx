@@ -209,6 +209,7 @@ function SelectAccount({ navigation, route }: Props) {
 
   return (
     <SafeAreaView
+      edges={["left", "right", "bottom"]}
       style={[
         styles.root,
         {
