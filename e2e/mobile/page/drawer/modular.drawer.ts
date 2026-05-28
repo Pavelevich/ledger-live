@@ -19,6 +19,10 @@ export default class ModularDrawer {
     `${this.bottomSheetId("header-title")}|modular-drawer-Asset-title`,
     "i",
   );
+  accountBasedTitleIdMAD = new RegExp(
+    `${this.bottomSheetId("header-title")}|modular-drawer-Account-title`,
+    "i",
+  );
   networkSelectionScrollViewId = "modular-drawer-network-selection-scrollView";
   addNewOrExistingAccountButton = "add-new-account-button";
   drawerCloseButtonId = new RegExp(
@@ -158,7 +162,7 @@ export default class ModularDrawer {
 
   @Step("Validate account(s) present on account list")
   async validateAccountsScreen(accounts?: string[]): Promise<void> {
-    const accountBasedTitle = await getTextOfElement(this.assetBasedTitleIdMAD);
+    const accountBasedTitle = await getTextOfElement(this.accountBasedTitleIdMAD);
     jestExpect(accountBasedTitle).toMatch(/Select account.*/i);
     if (!accounts) {
       await detoxExpect(getElementById(this.accountItem)).not.toBeVisible();
@@ -192,7 +196,7 @@ export default class ModularDrawer {
 
   @Step("Validate assets present on account list")
   async validateAssetsScreen(assets: string[]): Promise<void> {
-    const assetBasedTitle = await getTextOfElement(this.assetBasedTitleIdMAD);
+    const assetBasedTitle = await getTextOfElement(this.assetBasedTitleIdMAD, 2);
     jestExpect(assetBasedTitle).toMatch(/Select asset.*/i);
     for (const asset of assets) {
       const assetItemId = this.assetItemByTicker(asset);
