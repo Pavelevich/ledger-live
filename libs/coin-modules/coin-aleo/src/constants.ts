@@ -14,6 +14,14 @@ export const EXPLORER_TRANSFER_TYPES = {
   PUBLIC_TO_PRIVATE: "transfer_public_to_private",
 };
 
+// Function names that represent actual private token transfers between parties.
+// Used to exclude internal operations (split, join, fee_private, etc.) from history.
+export const PRIVATE_TRANSFER_FUNCTIONS = new Set([
+  EXPLORER_TRANSFER_TYPES.PRIVATE,
+  EXPLORER_TRANSFER_TYPES.PRIVATE_TO_PUBLIC,
+  EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE,
+]);
+
 export const TRANSACTION_TYPE = {
   TRANSFER_PUBLIC: "transfer_public",
   TRANSFER_PRIVATE: "transfer_private",

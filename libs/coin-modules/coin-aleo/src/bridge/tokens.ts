@@ -9,7 +9,12 @@ import type { AleoOperation, AleoOperationExtra, AleoTokenAccount } from "../typ
 import type { AleoPrivateTokenBalance } from "../types/logic";
 import { apiClient } from "../network/api";
 import { sdkClient } from "../network/sdk";
-import { PROGRAM_ID, EXPLORER_TRANSFER_TYPES, AMOUNT_ARG_INDEX } from "../constants";
+import {
+  PROGRAM_ID,
+  EXPLORER_TRANSFER_TYPES,
+  AMOUNT_ARG_INDEX,
+  PRIVATE_TRANSFER_FUNCTIONS,
+} from "../constants";
 import { mergeOps } from "@ledgerhq/ledger-wallet-framework/bridge/jsHelpers";
 import { promiseAllBatched } from "@ledgerhq/live-promise";
 
@@ -513,8 +518,9 @@ type TxOpEntry = {
 };
 
 /**
- * Deduplicates private records by commitment and excludes unspent change records
- * (sender === address, not yet re-spent) since those represent current balance only.
+ * Deduplicates private records by commitment, excludes unspent change records
+ * (sender === address, not yet re-spent), and excludes non-transfer records
+ * (split, join, fee_private, etc.) that do not represent token movements.
  */
 export function filterHistoryRecords(
   records: AleoPrivateRecord[],
@@ -522,7 +528,11 @@ export function filterHistoryRecords(
 ): AleoPrivateRecord[] {
   return [
     ...new Map(
-      records.filter(r => r.spent || r.sender !== address).map(r => [r.commitment, r]),
+      records
+        .filter(
+          r => PRIVATE_TRANSFER_FUNCTIONS.has(r.function_name) && (r.spent || r.sender !== address),
+        )
+        .map(r => [r.commitment, r]),
     ).values(),
   ];
 }
