@@ -22,6 +22,14 @@ export const PRIVATE_TRANSFER_FUNCTIONS = new Set([
   EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE,
 ]);
 
+// Semi-public function names that cross the public/private boundary.
+// These appear in public token operations AND have matching private records,
+// so they need to be patched during private sync (analogous to coin ops patching).
+export const SEMI_PUBLIC_TOKEN_FUNCTIONS = new Set([
+  EXPLORER_TRANSFER_TYPES.PRIVATE_TO_PUBLIC,
+  EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE,
+]);
+
 export const TRANSACTION_TYPE = {
   TRANSFER_PUBLIC: "transfer_public",
   TRANSFER_PRIVATE: "transfer_private",

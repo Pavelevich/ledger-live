@@ -529,9 +529,18 @@ export function filterHistoryRecords(
   return [
     ...new Map(
       records
-        .filter(
-          r => PRIVATE_TRANSFER_FUNCTIONS.has(r.function_name) && (r.spent || r.sender !== address),
-        )
+        .filter(r => {
+          if (!PRIVATE_TRANSFER_FUNCTIONS.has(r.function_name)) return false;
+          if (r.spent || r.sender !== address) return true;
+          // transfer_public_to_private: sender === address means you sent public → private to
+          // yourself (self-transfer). The private output record IS the IN side — include it.
+          // transfer_private_to_public: sender === address means this is the change record from
+          // a Priv2Pub transfer. Include it so the OUT side appears in the token sub-account.
+          return (
+            r.function_name === EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE ||
+            r.function_name === EXPLORER_TRANSFER_TYPES.PRIVATE_TO_PUBLIC
+          );
+        })
         .map(r => [r.commitment, r]),
     ).values(),
   ];
@@ -544,7 +553,16 @@ export function buildPrivateTokenOp(
   { amount, record, tokenInfo }: TxOpEntry,
   address: string,
 ): AleoOperation {
-  const type: OperationType = record.sender === address ? "OUT" : "IN";
+  // For transfer_public_to_private, the private record is the IN side even when
+  // sender === address — you received your own public tokens as private.
+  // For all other functions, sender === address means you sent tokens OUT.
+  const isP2PrivSelfTransfer =
+    record.function_name === EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE && record.sender === address;
+  const type: OperationType = isP2PrivSelfTransfer
+    ? "IN"
+    : record.sender === address
+      ? "OUT"
+      : "IN";
   const senders = type === "OUT" ? [address] : [record.sender];
   const recipients = type === "OUT" ? [] : [address];
   return {
@@ -649,7 +667,10 @@ export async function buildSubAccountsFromPrivateRecords({
   baseSubAccounts: TokenAccount[];
   viewKey: string;
   address: string;
-}): Promise<{ subAccounts: AleoTokenAccount[] }> {
+}): Promise<{
+  subAccounts: AleoTokenAccount[];
+  privateTokenOpsByAccountId: Map<string, AleoOperation[]>;
+}> {
   const existingSubAccountIds = new Set(baseSubAccounts.map(sa => sa.id));
 
   const allVerified = await apiClient.getVerifiedTokens({ currency });
@@ -664,6 +685,8 @@ export async function buildSubAccountsFromPrivateRecords({
     await promiseAllBatched(4, unspentPrivateRecords, async record => {
       const verifiedToken = tokenMap.get(record.program_name);
       if (!verifiedToken) return;
+
+      const _test = "a";
 
       const decrypted = await sdkClient.decryptRecord({
         currency,
@@ -693,6 +716,7 @@ export async function buildSubAccountsFromPrivateRecords({
       subAccounts: baseSubAccounts.map(sa =>
         withPrivateBalance(sa, true, balanceEntriesById, privateTokenOpsByAccountId),
       ),
+      privateTokenOpsByAccountId,
     };
   }
 
@@ -710,7 +734,13 @@ export async function buildSubAccountsFromPrivateRecords({
     if (!verifiedToken) return;
 
     let amount: BigNumber;
-    if (record.sender === address) {
+    // P2Priv self-transfer: the private record is the received output — decrypt it directly.
+    // All other sender===address cases are OUT events (Priv2Pub change record, etc.) where
+    // the record amount is the pre-send balance, so we read the transferred amount from inputs.
+    const isP2PrivSelfTransfer =
+      record.function_name === EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE &&
+      record.sender === address;
+    if (record.sender === address && !isP2PrivSelfTransfer) {
       // OUT: the spent input record's own amount is the full pre-send balance, not what
       // was sent. Read the actual sent amount from the transition inputs instead.
       const outAmount = await getTokenOutAmountFromTransition({ currency, record, viewKey });
@@ -722,7 +752,7 @@ export async function buildSubAccountsFromPrivateRecords({
       }
       amount = outAmount ?? new BigNumber(0);
     } else {
-      // IN: the received record's amount is correct.
+      // IN (or P2Priv self-transfer): the record itself contains the correct received amount.
       const decrypted = await sdkClient.decryptRecord({
         currency,
         ciphertext: record.record_ciphertext,
@@ -766,5 +796,6 @@ export async function buildSubAccountsFromPrivateRecords({
   ];
   return {
     subAccounts: finalSubAccounts,
+    privateTokenOpsByAccountId,
   };
 }

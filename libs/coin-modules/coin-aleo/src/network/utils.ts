@@ -10,6 +10,7 @@ import {
   EXPLORER_TRANSFER_TYPES,
   PROGRAM_ID,
   RECIPIENT_ARG_INDEX,
+  TOKENS_PROGRAMS,
 } from "../constants";
 import { sdkClient } from "../network/sdk";
 import type {
@@ -362,6 +363,23 @@ async function enrichOutgoingRecord({
     };
   }
 
+  const isTokenProgram = TOKENS_PROGRAMS.some(p => p === rawRecord.program_name);
+  const recipientOutputIndex = isTokenProgram ? RECIPIENT_ARG_INDEX - 1 : RECIPIENT_ARG_INDEX;
+  const amountOutputIndex = isTokenProgram ? AMOUNT_ARG_INDEX - 1 : AMOUNT_ARG_INDEX;
+
+  console.log("[aleo/debug] enrichOutgoingRecord", {
+    txId: transactionId,
+    programName: rawRecord.program_name,
+    functionName: rawRecord.function_name,
+    isTokenProgram,
+    recipientOutputIndex,
+    amountOutputIndex,
+    tpk: recordTransition.tpk,
+    allInputs: recordTransition.inputs,
+    recipientCiphertext: recipientArgument.value,
+    amountCiphertext: amountArgument.value,
+  });
+
   const [recipientData, amountData] = await Promise.all([
     sdkClient.decryptCiphertext({
       currency,
@@ -370,7 +388,7 @@ async function enrichOutgoingRecord({
       viewKey,
       programId: rawRecord.program_name,
       functionName: rawRecord.function_name,
-      outputIndex: RECIPIENT_ARG_INDEX,
+      outputIndex: recipientOutputIndex,
     }),
     sdkClient.decryptCiphertext({
       currency,
@@ -379,9 +397,15 @@ async function enrichOutgoingRecord({
       viewKey,
       programId: rawRecord.program_name,
       functionName: rawRecord.function_name,
-      outputIndex: AMOUNT_ARG_INDEX,
+      outputIndex: amountOutputIndex,
     }),
   ]);
+
+  console.log("[aleo/debug] enrichOutgoingRecord decrypted", {
+    txId: transactionId,
+    recipientPlaintext: recipientData.plaintext,
+    amountPlaintext: amountData.plaintext,
+  });
 
   return {
     sender: address,
@@ -437,14 +461,44 @@ export async function enrichPrivateRecord({
   viewKey: string;
 }): Promise<EnrichedPrivateRecord | null> {
   const transactionId = rawRecord.transaction_id.trim();
+
+  // Fee records (fee_private / fee_public) are not transfer operations.
+  // Their transition lives in details.fee, not details.execution.transitions,
+  // so transition_index may resolve to the wrong execution transition (e.g. the
+  // token transfer), leading to wrong decryption or a crash. Skip them explicitly.
+  if (rawRecord.function_name === "fee_private" || rawRecord.function_name === "fee_public") {
+    console.log("[aleo/debug] enrichPrivateRecord: skipped (fee record)", {
+      txId: transactionId,
+      functionName: rawRecord.function_name,
+      programName: rawRecord.program_name,
+    });
+    return null;
+  }
+
+  console.log("[aleo/debug] enrichPrivateRecord: start", {
+    txId: transactionId,
+    sender: rawRecord.sender,
+    functionName: rawRecord.function_name,
+    programName: rawRecord.program_name,
+    transitionIndex: rawRecord.transition_index,
+    isOutgoing: rawRecord.sender === address,
+  });
+
   const details = await apiClient.getTransactionById(currency, transactionId);
 
   if (shouldSkipPublicToPrivateRecord(rawRecord, address)) {
+    console.log("[aleo/debug] enrichPrivateRecord: skipped (public_to_private self-send)", {
+      txId: transactionId,
+    });
     return null;
   }
 
   const recordTransition = getRecordTransition(details, rawRecord, transactionId);
   if (!recordTransition) {
+    console.log("[aleo/debug] enrichPrivateRecord: skipped (no transition found)", {
+      txId: transactionId,
+      transitionIndex: rawRecord.transition_index,
+    });
     return null;
   }
 
@@ -588,6 +642,24 @@ export const patchPublicOperations = async ({
       const recipientInput = recordTransition?.inputs[0] ?? {};
       const recipientArgument = "value" in recipientInput ? recipientInput : null;
 
+      console.log("[aleo/debug] patchPublicOperations: else branch", {
+        opHash: operation.hash,
+        functionId: operation.extra.functionId,
+        tokenInfo: operation.extra.tokenInfo,
+        transitionsCount: txDetails.execution?.transitions?.length,
+        transition0Program: txDetails.execution?.transitions[0]?.program,
+        transition0Function: txDetails.execution?.transitions[0]?.function,
+        allTransitions: txDetails.execution?.transitions?.map((t, i) => ({
+          i,
+          program: t.program,
+          function: t.function,
+          inputsCount: t.inputs.length,
+        })),
+        recipientInputType: Object.keys(recipientInput),
+        hasRecipientArgument: !!recipientArgument,
+        recipientCiphertext: recipientArgument?.value,
+      });
+
       // if this is public to private, our account is sender, so it's possible to decrypt the recipient address
       // arguments of transfer_public_to_private function are (address_ciphertext, amount)
       if (
@@ -595,14 +667,47 @@ export const patchPublicOperations = async ({
         operation.extra.functionId === EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE
       ) {
         const shouldMarkAsPatched = latestPrivateRecordBlockHeight >= txDetails.block_height;
-        const recipientData = await sdkClient.decryptCiphertext({
-          currency,
-          ciphertext: recipientArgument.value,
-          tpk: recordTransition.tpk,
-          viewKey,
-          programId: PROGRAM_ID.CREDITS,
+
+        const isTokenOp = !!operation.extra.tokenInfo?.programId;
+        const programId = isTokenOp
+          ? operation.extra.tokenInfo?.programId ?? PROGRAM_ID.CREDITS
+          : PROGRAM_ID.CREDITS;
+        const outputIndex = isTokenOp ? 0 : 0;
+
+        console.log("[aleo/debug] patchPublicOperations: decryptCiphertext params", {
+          opHash: operation.hash,
+          programId,
           functionName: EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE,
-          outputIndex: 0,
+          outputIndex,
+          isTokenOp,
+          tpk: recordTransition.tpk,
+          ciphertext: recipientArgument.value,
+        });
+
+        let recipientData;
+        try {
+          recipientData = await sdkClient.decryptCiphertext({
+            currency,
+            ciphertext: recipientArgument.value,
+            tpk: recordTransition.tpk,
+            viewKey,
+            programId,
+            functionName: EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE,
+            outputIndex,
+          });
+        } catch (err) {
+          console.error("[aleo/debug] patchPublicOperations: decryptCiphertext failed", {
+            opHash: operation.hash,
+            programId,
+            err,
+          });
+          patchedOperations.push(operation);
+          continue;
+        }
+
+        console.log("[aleo/debug] patchPublicOperations: decrypted recipient", {
+          opHash: operation.hash,
+          recipientPlaintext: recipientData.plaintext,
         });
 
         patchedOperations.push({

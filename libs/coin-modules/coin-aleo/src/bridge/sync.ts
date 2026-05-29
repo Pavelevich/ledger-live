@@ -280,6 +280,13 @@ export async function performPrivateSync(
   const tokenSyncStartHeight =
     shouldFetchPrivateTokens && hasMigratedPrivateTokens ? lastPrivateBlockHeight : 0;
 
+  console.log("[aleo/debug] performPrivateSync: fetching records", {
+    address,
+    lastPrivateBlockHeight,
+    tokenSyncStartHeight,
+    shouldFetchPrivateTokens,
+  });
+
   const [
     rawNewPrivateRecords,
     rawUnspentPrivateRecords,
@@ -322,8 +329,26 @@ export async function performPrivateSync(
 
   signal?.throwIfAborted();
 
+  console.log("[aleo/debug] performPrivateSync: records fetched", {
+    rawNewPrivateRecordsCount: rawNewPrivateRecords.length,
+    rawUnspentPrivateRecordsCount: rawUnspentPrivateRecords.length,
+    rawTokenPrivateRecordsCount: rawTokenPrivateRecords.length,
+    rawUnspentTokenRecordsCount: rawUnspentTokenRecords.length,
+    sampleNew: rawNewPrivateRecords.slice(0, 3).map(r => ({
+      txId: r.transaction_id,
+      sender: r.sender,
+      functionName: r.function_name,
+      programName: r.program_name,
+      transitionIndex: r.transition_index,
+    })),
+  });
+
   // Emits PROGRESS_AFTER_SCANNER% progress when all records are fetched
   onProgress?.(PROGRESS_AFTER_SCANNER);
+
+  console.log(
+    "[aleo/debug] performPrivateSync: starting listPrivateOperations + patchPublicOperations",
+  );
 
   const [latestAccountPrivateOperations, patchedPublicOperations] = await Promise.all([
     listPrivateOperations({
@@ -354,6 +379,12 @@ export async function performPrivateSync(
       viewKey,
     }),
   ]);
+
+  console.log("[aleo/debug] performPrivateSync: listPrivateOperations done", {
+    privateOpsCount: latestAccountPrivateOperations.operations.length,
+    consumedTagsCount: latestAccountPrivateOperations.consumedRecordTags.size,
+    patchedPublicOpsCount: patchedPublicOperations.length,
+  });
 
   // Record scanner API may return already-spent records even with "unspent: true" filter.
   // This is confirmed and expected behavior for now - scanner relies on two processes that can lag behind each other.
@@ -415,7 +446,7 @@ export async function performPrivateSync(
   if (config.enableTokens) {
     const baseSubAccounts = publicSubAccounts ?? initialAccount.subAccounts ?? [];
 
-    const { subAccounts } = await buildSubAccountsFromPrivateRecords({
+    const { subAccounts, privateTokenOpsByAccountId } = await buildSubAccountsFromPrivateRecords({
       currency,
       ledgerAccountId,
       allPrivateRecords: rawTokenPrivateRecords,
@@ -426,6 +457,23 @@ export async function performPrivateSync(
     });
 
     mergedSubAccounts = subAccounts;
+
+    // Attach private-side token ops to the parent coin op's subOperations so that
+    // the FEES operation details view shows both sides of self-transfer transactions
+    // (e.g. the IN private output for P2Priv and the OUT change for Priv2Pub).
+    const coinOpsByHash = new Map<string, AleoOperation>(operations.map(op => [op.hash, op]));
+    for (const privateOps of privateTokenOpsByAccountId.values()) {
+      for (const privateOp of privateOps) {
+        const parentCoinOp = coinOpsByHash.get(privateOp.hash);
+        if (!parentCoinOp) continue;
+        const alreadyPresent = (parentCoinOp.subOperations ?? []).some(
+          so => so.id === privateOp.id,
+        );
+        if (!alreadyPresent) {
+          parentCoinOp.subOperations = [...(parentCoinOp.subOperations ?? []), privateOp];
+        }
+      }
+    }
   }
 
   onProgress?.(PROGRESS_DONE);
