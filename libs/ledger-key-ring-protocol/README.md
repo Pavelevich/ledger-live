@@ -1,5 +1,6 @@
-## ledger key ring protocol
+# @ledgerhq/ledger-key-ring-protocol
 
+<<<<<<< HEAD
 Ledger Key Ring Protocol layer.
 
 ## Testing the SDK with recorded scenarios
@@ -56,3 +57,19 @@ Set `RUN_EVEN_IF_SNAPSHOT_EXISTS=1` to run a scenario live without overwriting i
 (handy to check it still passes against staging). Speculos loopback traffic is filtered out
 of the snapshot, and compressed response bodies are decoded before being stored, so the
 replay can serve them as plain JSON.
+=======
+Core Ledger Key Ring Protocol package.
+
+The hardware-specific integration lives in
+[../hw-ledger-key-ring-protocol](../hw-ledger-key-ring-protocol/README.md), and
+the deterministic E2E replay script is documented in
+[scripts/README.md](scripts/README.md).
+
+Run package commands from the repository root:
+
+```bash
+pnpm lkrp build
+pnpm lkrp test
+pnpm lkrp typecheck
+```
+>>>>>>> d2f86b6517 (docs(platform): update repo README entrypoints)
