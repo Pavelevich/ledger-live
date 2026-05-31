@@ -902,6 +902,7 @@ export const DEFAULT_FEATURES: Features = {
   },
   lldTezosStaking: DEFAULT_FEATURE,
   llmTezosStaking: DEFAULT_FEATURE,
+  swapToEarn: DEFAULT_FEATURE,
 };
 
 // Firebase SDK treat JSON values as strings
