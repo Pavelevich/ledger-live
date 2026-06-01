@@ -12,7 +12,6 @@ import { sdkClient } from "../network/sdk";
 import {
   PROGRAM_ID,
   EXPLORER_TRANSFER_TYPES,
-  AMOUNT_ARG_INDEX,
   PRIVATE_TRANSFER_FUNCTIONS,
   SEMI_PUBLIC_TOKEN_FUNCTIONS,
 } from "../constants";
@@ -491,9 +490,17 @@ async function getTokenOutDetailsFromTransition({
 
   // For private_to_public the amount argument is already in plaintext at AMOUNT_ARG_INDEX.
   if (record.function_name === EXPLORER_TRANSFER_TYPES.PRIVATE_TO_PUBLIC) {
-    const amountInput = transition.inputs[AMOUNT_ARG_INDEX] ?? null;
-    if (!amountInput || !("value" in amountInput)) return { amount: null, recipient };
-    return { amount: parseTokenBalance(amountInput.value), recipient };
+    // Scan inputs by pattern instead of assuming a fixed argument index — token programs
+    // may differ from credits.aleo (e.g. record, amount, receiver vs record, receiver, amount).
+    for (const inp of transition.inputs) {
+      if ("value" in inp && inp.value) {
+        const plain = inp.value.trim().replace(/\.(private|public|constant)$/, "");
+        if (/^\d+u\d+$/.test(plain)) {
+          return { amount: parseTokenBalance(plain), recipient };
+        }
+      }
+    }
+    return { amount: null, recipient };
   }
 
   // Fully private transfer: decrypt all inputs in parallel, then extract the amount

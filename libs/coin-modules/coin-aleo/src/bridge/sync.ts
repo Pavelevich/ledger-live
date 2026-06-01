@@ -6,6 +6,7 @@ import {
   mergeOps,
 } from "@ledgerhq/ledger-wallet-framework/bridge/jsHelpers";
 import { encodeAccountId } from "@ledgerhq/ledger-wallet-framework/account/accountId";
+import { encodeOperationId } from "@ledgerhq/ledger-wallet-framework/operation";
 import { log } from "@ledgerhq/logs";
 import { concat, merge, Observable, of } from "rxjs";
 import { concatMap } from "rxjs/operators";
@@ -472,7 +473,42 @@ export async function performPrivateSync(
     const coinOpsByHash = new Map<string, AleoOperation>(operations.map(op => [op.hash, op]));
     for (const privateOps of privateTokenOpsByAccountId.values()) {
       for (const privateOp of privateOps) {
-        const parentCoinOp = coinOpsByHash.get(privateOp.hash);
+        let parentCoinOp = coinOpsByHash.get(privateOp.hash);
+
+        if (privateOp.type === "OUT") {
+          if (!parentCoinOp) {
+            // transfer_private_to_public paid with a private fee has no public coin op.
+            // Create a FEES parent so the operation appears in the account history.
+            parentCoinOp = {
+              id: encodeOperationId(ledgerAccountId, privateOp.hash, "FEES"),
+              hash: privateOp.hash,
+              type: "FEES",
+              value: new BigNumber(0),
+              fee: new BigNumber(0),
+              senders: privateOp.senders,
+              recipients: privateOp.recipients,
+              blockHeight: privateOp.blockHeight,
+              blockHash: privateOp.blockHash ?? "",
+              accountId: ledgerAccountId,
+              date: privateOp.date,
+              extra: {
+                functionId: privateOp.extra?.functionId ?? "",
+                transactionType: "private" as const,
+              },
+              subOperations: [],
+              nftOperations: [],
+              internalOperations: [],
+              hasFailed: false,
+            };
+            operations.push(parentCoinOp);
+            coinOpsByHash.set(privateOp.hash, parentCoinOp);
+          } else if (parentCoinOp.type !== "FEES") {
+            // Promote an existing non-FEES coin op (e.g. NONE) to FEES.
+            parentCoinOp.id = encodeOperationId(ledgerAccountId, privateOp.hash, "FEES");
+            parentCoinOp.type = "FEES";
+          }
+        }
+
         if (!parentCoinOp) continue;
         const alreadyPresent = (parentCoinOp.subOperations ?? []).some(
           so => so.id === privateOp.id,
