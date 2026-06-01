@@ -30,7 +30,11 @@ import {
   PROGRESS_DONE,
   TOKENS_PROGRAMS,
 } from "../constants";
-import { resolveTokenSubAccounts, buildSubAccountsFromPrivateRecords } from "./tokens";
+import {
+  resolveTokenSubAccounts,
+  buildSubAccountsFromPrivateRecords,
+  patchTokenSubAccountOps,
+} from "./tokens";
 import type {
   AleoAccount,
   AleoOperation,
@@ -456,7 +460,11 @@ export async function performPrivateSync(
       address,
     });
 
-    mergedSubAccounts = subAccounts;
+    const patchedSubAccounts = patchTokenSubAccountOps({
+      subAccounts,
+    });
+
+    mergedSubAccounts = patchedSubAccounts;
 
     // Attach private-side token ops to the parent coin op's subOperations so that
     // the FEES operation details view shows both sides of self-transfer transactions

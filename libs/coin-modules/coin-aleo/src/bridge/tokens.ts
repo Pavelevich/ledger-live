@@ -14,6 +14,7 @@ import {
   EXPLORER_TRANSFER_TYPES,
   AMOUNT_ARG_INDEX,
   PRIVATE_TRANSFER_FUNCTIONS,
+  SEMI_PUBLIC_TOKEN_FUNCTIONS,
 } from "../constants";
 import { mergeOps } from "@ledgerhq/ledger-wallet-framework/bridge/jsHelpers";
 import { promiseAllBatched } from "@ledgerhq/live-promise";
@@ -453,14 +454,14 @@ export async function resolveTokenSubAccounts({
  */
 
 /**
- * For an outgoing (OUT) private token transfer, the spent input record's own `amount`
- * is the full pre-send balance — NOT the amount that was sent to the recipient.
- * Reads the actual sent amount from the transition inputs instead.
+ * For an outgoing (OUT) private token transfer, reads both the transferred amount and
+ * the recipient address from the transition inputs.  The spent input record's own
+ * `amount` is the full pre-send balance — NOT the amount sent.
  *
- * Returns null if the transition data is unavailable or the input cannot be parsed,
- * in which case the caller should fall back to the record amount.
+ * Returns null fields when the transition data is unavailable or cannot be parsed;
+ * callers should fall back to 0 for amount and omit the recipient.
  */
-async function getTokenOutAmountFromTransition({
+async function getTokenOutDetailsFromTransition({
   currency,
   record,
   viewKey,
@@ -468,21 +469,35 @@ async function getTokenOutAmountFromTransition({
   currency: CryptoCurrency;
   record: AleoPrivateRecord;
   viewKey: string;
-}): Promise<BigNumber | null> {
+}): Promise<{ amount: BigNumber | null; recipient: string | null }> {
   const txDetails = await apiClient.getTransactionById(currency, record.transaction_id.trim());
   const transition = txDetails.execution?.transitions[record.transition_index];
 
-  if (!transition) return null;
+  if (!transition) return { amount: null, recipient: null };
+
+  // Scan plaintext inputs for a recipient address first.
+  // transfer_private_to_public exposes the receiver as address.public so it is
+  // readable without decryption; many token programs do the same for transfer_private.
+  let recipient: string | null = null;
+  for (const inp of transition.inputs) {
+    if ("value" in inp && inp.value) {
+      const plain = inp.value.trim().replace(/\.(private|public|constant)$/, "");
+      if (plain.includes("aleo")) {
+        recipient = plain;
+        break;
+      }
+    }
+  }
 
   // For private_to_public the amount argument is already in plaintext at AMOUNT_ARG_INDEX.
   if (record.function_name === EXPLORER_TRANSFER_TYPES.PRIVATE_TO_PUBLIC) {
     const amountInput = transition.inputs[AMOUNT_ARG_INDEX] ?? null;
-    if (!amountInput || !("value" in amountInput)) return null;
-    return parseTokenBalance(amountInput.value);
+    if (!amountInput || !("value" in amountInput)) return { amount: null, recipient };
+    return { amount: parseTokenBalance(amountInput.value), recipient };
   }
 
-  // Fully private transfer: decrypt all inputs in parallel and pick the one whose
-  // plaintext is a plain integer amount ("1u128", "500u64", etc.).
+  // Fully private transfer: decrypt all inputs in parallel, then extract the amount
+  // and (if not already found above) the recipient address from decrypted plaintexts.
   const decryptedInputs = await Promise.all(
     transition.inputs.map(async (inp, idx) => {
       if (!("value" in inp) || !inp.value) return { idx, raw: inp };
@@ -506,15 +521,28 @@ async function getTokenOutAmountFromTransition({
   const amountEntry = decryptedInputs.find(
     entry => "decrypted" in entry && /^\d+u\d+/.test((entry.decrypted?.plaintext ?? "").trim()),
   );
-  if (!amountEntry || !("decrypted" in amountEntry)) return null;
 
-  return parseTokenBalance(amountEntry.decrypted!.plaintext);
+  if (!recipient) {
+    const firstDecrypted = decryptedInputs.find(entry => "decrypted" in entry);
+    if (firstDecrypted && "decrypted" in firstDecrypted) {
+      const plain = firstDecrypted
+        .decrypted!.plaintext.trim()
+        .replace(/\.(private|public|constant)$/, "");
+      if (plain.includes("aleo")) {
+        recipient = plain;
+      }
+    }
+  }
+
+  if (!amountEntry || !("decrypted" in amountEntry)) return { amount: null, recipient };
+  return { amount: parseTokenBalance(amountEntry.decrypted!.plaintext), recipient };
 }
 
 type TxOpEntry = {
   amount: BigNumber;
   record: AleoPrivateRecord;
   tokenInfo: NonNullable<AleoOperationExtra["tokenInfo"]>;
+  recipient?: string;
 };
 
 /**
@@ -550,7 +578,7 @@ export function filterHistoryRecords(
 export function buildPrivateTokenOp(
   tokenAccountId: string,
   txId: string,
-  { amount, record, tokenInfo }: TxOpEntry,
+  { amount, record, tokenInfo, recipient }: TxOpEntry,
   address: string,
 ): AleoOperation {
   // For transfer_public_to_private, the private record is the IN side even when
@@ -564,7 +592,7 @@ export function buildPrivateTokenOp(
       ? "OUT"
       : "IN";
   const senders = type === "OUT" ? [address] : [record.sender];
-  const recipients = type === "OUT" ? [] : [address];
+  const recipients = type === "OUT" ? (recipient ? [recipient] : []) : [address];
   return {
     id: encodeOperationId(tokenAccountId, txId, type),
     hash: txId,
@@ -633,6 +661,67 @@ export function withPrivateBalance(
   };
 }
 
+/**
+ * Patches public token sub-account ops for semi-transparent transfers.
+ *
+ * After `buildSubAccountsFromPrivateRecords` merges private ops into each
+ * sub-account, some public ops (transfer_public_to_private / transfer_private_to_public)
+ * may still be missing senders or recipients because the other side of the transfer
+ * was private at parse time.
+ *
+ * For each such op, look for a private op with the same transaction hash already
+ * present in the same sub-account's operations.  If one exists, copy the missing
+ * senders/recipients from it and mark the op as patched.  If no private op is
+ * found for that hash, skip — we have no data to fill in.
+ */
+export function patchTokenSubAccountOps({
+  subAccounts,
+}: {
+  subAccounts: TokenAccount[];
+}): TokenAccount[] {
+  return subAccounts.map(subAccount => {
+    const ops = subAccount.operations as AleoOperation[];
+
+    // Index ops that have private transactionType by hash so we can look them up in O(1).
+    const privateOpsByHash = new Map<string, AleoOperation[]>();
+    for (const op of ops) {
+      if (op.extra?.transactionType === "private") {
+        const bucket = privateOpsByHash.get(op.hash) ?? [];
+        bucket.push(op);
+        privateOpsByHash.set(op.hash, bucket);
+      }
+    }
+
+    const patchedOps = ops.map(op => {
+      if (!SEMI_PUBLIC_TOKEN_FUNCTIONS.has(op.extra?.functionId)) return op;
+      if (op.extra?.patched) return op;
+
+      // Treat an empty array or an array of only empty strings as "missing".
+      const missingSenders = op.senders.every(s => !s);
+      const missingRecipients = op.recipients.every(r => !r);
+      if (!missingSenders && !missingRecipients) return op;
+
+      // Only patch when we already have a private op for this hash — no API calls.
+      const privateOps = privateOpsByHash.get(op.hash);
+      if (!privateOps?.length) return op;
+
+      const privateOp = privateOps[0];
+      return {
+        ...op,
+        senders:
+          missingSenders && privateOp.senders.some(s => !!s) ? privateOp.senders : op.senders,
+        recipients:
+          missingRecipients && privateOp.recipients.some(r => !!r)
+            ? privateOp.recipients
+            : op.recipients,
+        extra: { ...op.extra, patched: true },
+      };
+    });
+
+    return { ...subAccount, operations: patchedOps };
+  });
+}
+
 export function accumulateOp(
   opAccumulator: Map<string, Map<string, TxOpEntry>>,
   tokenAccountId: string,
@@ -640,6 +729,7 @@ export function accumulateOp(
   amount: BigNumber,
   record: AleoPrivateRecord,
   tokenInfo: NonNullable<AleoOperationExtra["tokenInfo"]>,
+  recipient?: string,
 ): void {
   if (!opAccumulator.has(tokenAccountId)) opAccumulator.set(tokenAccountId, new Map());
   const txMap = opAccumulator.get(tokenAccountId)!;
@@ -647,7 +737,12 @@ export function accumulateOp(
   if (existing) {
     existing.amount = existing.amount.plus(amount);
   } else {
-    txMap.set(txId, { amount, record, tokenInfo });
+    txMap.set(txId, {
+      amount,
+      record,
+      tokenInfo,
+      ...(recipient !== undefined ? { recipient } : {}),
+    });
   }
 }
 
@@ -734,6 +829,7 @@ export async function buildSubAccountsFromPrivateRecords({
     if (!verifiedToken) return;
 
     let amount: BigNumber;
+    let recipient: string | undefined;
     // P2Priv self-transfer: the private record is the received output — decrypt it directly.
     // All other sender===address cases are OUT events (Priv2Pub change record, etc.) where
     // the record amount is the pre-send balance, so we read the transferred amount from inputs.
@@ -741,16 +837,16 @@ export async function buildSubAccountsFromPrivateRecords({
       record.function_name === EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE &&
       record.sender === address;
     if (record.sender === address && !isP2PrivSelfTransfer) {
-      // OUT: the spent input record's own amount is the full pre-send balance, not what
-      // was sent. Read the actual sent amount from the transition inputs instead.
-      const outAmount = await getTokenOutAmountFromTransition({ currency, record, viewKey });
-      if (outAmount === null) {
+      // OUT: read the actual sent amount and recipient address from the transition inputs.
+      const outDetails = await getTokenOutDetailsFromTransition({ currency, record, viewKey });
+      if (outDetails.amount === null) {
         log(
           "aleo/buildSubAccountsFromPrivateRecords",
           `Could not determine OUT amount for record ${record.commitment} (tx ${record.transaction_id}), falling back to 0`,
         );
       }
-      amount = outAmount ?? new BigNumber(0);
+      amount = outDetails.amount ?? new BigNumber(0);
+      recipient = outDetails.recipient ?? undefined;
     } else {
       // IN (or P2Priv self-transfer): the record itself contains the correct received amount.
       const decrypted = await sdkClient.decryptRecord({
@@ -771,10 +867,18 @@ export async function buildSubAccountsFromPrivateRecords({
       newSubAccounts.push(buildTokenAccount(id, ledgerAccountId, tokenCurrency));
     }
 
-    accumulateOp(opAccumulator, id, record.transaction_id.trim(), amount, record, {
-      programId: record.program_name,
-      tokenId: null,
-    });
+    accumulateOp(
+      opAccumulator,
+      id,
+      record.transaction_id.trim(),
+      amount,
+      record,
+      {
+        programId: record.program_name,
+        tokenId: null,
+      },
+      recipient,
+    );
   });
 
   // Build one operation per (token, transaction) from the accumulator.
