@@ -166,8 +166,6 @@ const AccountBalanceSummaryFooter = ({ account }: Readonly<Props>) => {
       formatConfig,
     );
 
-    console.log("DEBUG", aleoTokenAccount);
-
     const formattedPrivateTokenBalance = aleoTokenAccount.privateBalance
       ? formatCurrencyUnit(unit, aleoTokenAccount.privateBalance, formatConfig)
       : PRIVATE_BALANCE_PLACEHOLDER;

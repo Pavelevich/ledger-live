@@ -285,13 +285,6 @@ export async function performPrivateSync(
   const tokenSyncStartHeight =
     shouldFetchPrivateTokens && hasMigratedPrivateTokens ? lastPrivateBlockHeight : 0;
 
-  console.log("[aleo/debug] performPrivateSync: fetching records", {
-    address,
-    lastPrivateBlockHeight,
-    tokenSyncStartHeight,
-    shouldFetchPrivateTokens,
-  });
-
   const [
     rawNewPrivateRecords,
     rawUnspentPrivateRecords,
@@ -334,26 +327,8 @@ export async function performPrivateSync(
 
   signal?.throwIfAborted();
 
-  console.log("[aleo/debug] performPrivateSync: records fetched", {
-    rawNewPrivateRecordsCount: rawNewPrivateRecords.length,
-    rawUnspentPrivateRecordsCount: rawUnspentPrivateRecords.length,
-    rawTokenPrivateRecordsCount: rawTokenPrivateRecords.length,
-    rawUnspentTokenRecordsCount: rawUnspentTokenRecords.length,
-    sampleNew: rawNewPrivateRecords.slice(0, 3).map(r => ({
-      txId: r.transaction_id,
-      sender: r.sender,
-      functionName: r.function_name,
-      programName: r.program_name,
-      transitionIndex: r.transition_index,
-    })),
-  });
-
   // Emits PROGRESS_AFTER_SCANNER% progress when all records are fetched
   onProgress?.(PROGRESS_AFTER_SCANNER);
-
-  console.log(
-    "[aleo/debug] performPrivateSync: starting listPrivateOperations + patchPublicOperations",
-  );
 
   const [latestAccountPrivateOperations, patchedPublicOperations] = await Promise.all([
     listPrivateOperations({
@@ -384,12 +359,6 @@ export async function performPrivateSync(
       viewKey,
     }),
   ]);
-
-  console.log("[aleo/debug] performPrivateSync: listPrivateOperations done", {
-    privateOpsCount: latestAccountPrivateOperations.operations.length,
-    consumedTagsCount: latestAccountPrivateOperations.consumedRecordTags.size,
-    patchedPublicOpsCount: patchedPublicOperations.length,
-  });
 
   // Record scanner API may return already-spent records even with "unspent: true" filter.
   // This is confirmed and expected behavior for now - scanner relies on two processes that can lag behind each other.
