@@ -40,3 +40,7 @@ export type {
   DexProviderTransactionData,
   DexTransactionData,
 } from "./dex";
+
+// Device-intent custom swap flow primitives
+export * from "./intents";
+export * from "./swapFlow";
