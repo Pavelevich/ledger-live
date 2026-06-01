@@ -53,6 +53,10 @@ describe("useProductTourDrawerViewModel", () => {
 
   describe("initial drawer state", () => {
     it("should keep drawer closed on mount even when feature is enabled and tour is not completed", () => {
+      renderHook(() => useProductTourDrawerViewModel(), {
+        overrideInitialState: withFeatureEnabled,
+      }).unmount();
+
       const { result } = renderHook(() => useProductTourDrawerViewModel(), {
         overrideInitialState: withFeatureEnabled,
       });

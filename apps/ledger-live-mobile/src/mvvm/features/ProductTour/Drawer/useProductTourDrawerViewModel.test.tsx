@@ -26,6 +26,9 @@ describe("useProductTourDrawerViewModel", () => {
       overrideInitialState: withNonce(0),
     });
 
+    act(() => {
+      result.current.closeProductTour();
+    });
     expect(result.current.isDrawerOpen).toBe(false);
 
     act(() => {
