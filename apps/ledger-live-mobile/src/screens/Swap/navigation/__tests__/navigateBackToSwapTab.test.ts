@@ -49,10 +49,10 @@ describe("navigateBackToSwapTab", () => {
     expect(goBack).not.toHaveBeenCalled();
   });
 
-  it("should reset root navigation through Main and Swap in Wallet40", () => {
+  it("should go back through the parent navigation in Wallet40", () => {
     const parentDispatch = jest.fn();
     const parentGoBack = jest.fn();
-    const { navigation, dispatch } = createNavigation({
+    const { navigation, dispatch, goBack } = createNavigation({
       routeNames: [ScreenName.SwapHistory],
       parentNavigation: { dispatch: parentDispatch, goBack: parentGoBack },
     });
@@ -63,23 +63,9 @@ describe("navigateBackToSwapTab", () => {
     });
 
     expect(dispatch).not.toHaveBeenCalled();
-    expect(parentDispatch).toHaveBeenCalledWith(
-      CommonActions.reset({
-        index: 0,
-        routes: [
-          {
-            name: NavigatorName.Main,
-            params: {
-              screen: NavigatorName.Swap,
-              params: {
-                screen: ScreenName.SwapTab,
-              },
-            },
-          },
-        ],
-      }),
-    );
-    expect(parentGoBack).not.toHaveBeenCalled();
+    expect(goBack).not.toHaveBeenCalled();
+    expect(parentDispatch).not.toHaveBeenCalled();
+    expect(parentGoBack).toHaveBeenCalledTimes(1);
   });
 
   it("should reset root navigation to Swap in legacy flow", () => {

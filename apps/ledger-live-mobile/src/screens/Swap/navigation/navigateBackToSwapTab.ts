@@ -22,23 +22,6 @@ export function hasSwapTabRoute(state: NavigationStateWithRouteNames | undefined
   return Array.isArray(routeNames) && routeNames.includes(ScreenName.SwapTab);
 }
 
-function getResetToSwapTabAction() {
-  return CommonActions.reset({
-    index: 0,
-    routes: [
-      {
-        name: NavigatorName.Main,
-        params: {
-          screen: NavigatorName.Swap,
-          params: {
-            screen: ScreenName.SwapTab,
-          },
-        },
-      },
-    ],
-  });
-}
-
 function getResetToLegacySwapAction() {
   // Legacy Swap lives outside Main in the base stack, but we still need Main
   // underneath it so the Swap form back button returns to home instead of
@@ -88,7 +71,12 @@ export function navigateBackToSwapTab({
     return;
   }
 
-  parentNavigation.dispatch(getResetToSwapTabAction());
+  // Wallet 4.0: the Swap sub-screens navigator is pushed on top of Main, which
+  // is already on the Swap tab, so popping it returns there. We use goBack
+  // rather than a reset so the transition plays the natural back (pop)
+  // animation; a reset replays the forward (push) animation and the screen
+  // slides out the wrong way. See LIVE-28498.
+  parentNavigation.goBack();
 }
 
 export function isGoingToSwapHistory(payload: unknown) {
