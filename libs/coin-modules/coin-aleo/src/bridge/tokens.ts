@@ -468,11 +468,12 @@ async function getTokenOutDetailsFromTransition({
   currency: CryptoCurrency;
   record: AleoPrivateRecord;
   viewKey: string;
-}): Promise<{ amount: BigNumber | null; recipient: string | null }> {
+}): Promise<{ amount: BigNumber | null; recipient: string | null; nativeFee: BigNumber }> {
   const txDetails = await apiClient.getTransactionById(currency, record.transaction_id.trim());
+  const nativeFee = new BigNumber(txDetails.fee_value);
   const transition = txDetails.execution?.transitions[record.transition_index];
 
-  if (!transition) return { amount: null, recipient: null };
+  if (!transition) return { amount: null, recipient: null, nativeFee };
 
   // Scan plaintext inputs for a recipient address first.
   // transfer_private_to_public exposes the receiver as address.public so it is
@@ -496,11 +497,11 @@ async function getTokenOutDetailsFromTransition({
       if ("value" in inp && inp.value) {
         const plain = inp.value.trim().replace(/\.(private|public|constant)$/, "");
         if (/^\d+u\d+$/.test(plain)) {
-          return { amount: parseTokenBalance(plain), recipient };
+          return { amount: parseTokenBalance(plain), recipient, nativeFee };
         }
       }
     }
-    return { amount: null, recipient };
+    return { amount: null, recipient, nativeFee };
   }
 
   // Fully private transfer: decrypt all inputs in parallel, then extract the amount
@@ -541,8 +542,8 @@ async function getTokenOutDetailsFromTransition({
     }
   }
 
-  if (!amountEntry || !("decrypted" in amountEntry)) return { amount: null, recipient };
-  return { amount: parseTokenBalance(amountEntry.decrypted!.plaintext), recipient };
+  if (!amountEntry || !("decrypted" in amountEntry)) return { amount: null, recipient, nativeFee };
+  return { amount: parseTokenBalance(amountEntry.decrypted!.plaintext), recipient, nativeFee };
 }
 
 type TxOpEntry = {
@@ -550,6 +551,7 @@ type TxOpEntry = {
   record: AleoPrivateRecord;
   tokenInfo: NonNullable<AleoOperationExtra["tokenInfo"]>;
   recipient?: string;
+  nativeFee?: BigNumber;
 };
 
 /**
@@ -585,7 +587,7 @@ export function filterHistoryRecords(
 export function buildPrivateTokenOp(
   tokenAccountId: string,
   txId: string,
-  { amount, record, tokenInfo, recipient }: TxOpEntry,
+  { amount, record, tokenInfo, recipient, nativeFee }: TxOpEntry,
   address: string,
 ): AleoOperation {
   // For transfer_public_to_private, the private record is the IN side even when
@@ -605,7 +607,7 @@ export function buildPrivateTokenOp(
     hash: txId,
     type,
     value: amount,
-    fee: new BigNumber(0),
+    fee: nativeFee ?? new BigNumber(0),
     senders,
     recipients,
     blockHeight: record.block_height,
@@ -737,6 +739,7 @@ export function accumulateOp(
   record: AleoPrivateRecord,
   tokenInfo: NonNullable<AleoOperationExtra["tokenInfo"]>,
   recipient?: string,
+  nativeFee?: BigNumber,
 ): void {
   if (!opAccumulator.has(tokenAccountId)) opAccumulator.set(tokenAccountId, new Map());
   const txMap = opAccumulator.get(tokenAccountId)!;
@@ -749,6 +752,7 @@ export function accumulateOp(
       record,
       tokenInfo,
       ...(recipient !== undefined ? { recipient } : {}),
+      ...(nativeFee !== undefined ? { nativeFee } : {}),
     });
   }
 }
@@ -837,6 +841,7 @@ export async function buildSubAccountsFromPrivateRecords({
 
     let amount: BigNumber;
     let recipient: string | undefined;
+    let nativeFee: BigNumber | undefined;
     // P2Priv self-transfer: the private record is the received output — decrypt it directly.
     // All other sender===address cases are OUT events (Priv2Pub change record, etc.) where
     // the record amount is the pre-send balance, so we read the transferred amount from inputs.
@@ -854,6 +859,7 @@ export async function buildSubAccountsFromPrivateRecords({
       }
       amount = outDetails.amount ?? new BigNumber(0);
       recipient = outDetails.recipient ?? undefined;
+      nativeFee = outDetails.nativeFee;
     } else {
       // IN (or P2Priv self-transfer): the record itself contains the correct received amount.
       const decrypted = await sdkClient.decryptRecord({
@@ -885,6 +891,7 @@ export async function buildSubAccountsFromPrivateRecords({
         tokenId: null,
       },
       recipient,
+      nativeFee,
     );
   });
 

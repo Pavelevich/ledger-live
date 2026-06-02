@@ -616,26 +616,15 @@ export const patchPublicOperations = async ({
           : PROGRAM_ID.CREDITS;
         const outputIndex = isTokenOp ? 0 : 0;
 
-        let recipientData;
-        try {
-          recipientData = await sdkClient.decryptCiphertext({
-            currency,
-            ciphertext: recipientArgument.value,
-            tpk: recordTransition.tpk,
-            viewKey,
-            programId,
-            functionName: EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE,
-            outputIndex,
-          });
-        } catch (err) {
-          console.error("[aleo/debug] patchPublicOperations: decryptCiphertext failed", {
-            opHash: operation.hash,
-            programId,
-            err,
-          });
-          patchedOperations.push(operation);
-          continue;
-        }
+        const recipientData = await sdkClient.decryptCiphertext({
+          currency,
+          ciphertext: recipientArgument.value,
+          tpk: recordTransition.tpk,
+          viewKey,
+          programId,
+          functionName: EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE,
+          outputIndex,
+        });
 
         patchedOperations.push({
           ...operation,

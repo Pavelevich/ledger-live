@@ -452,8 +452,8 @@ export async function performPrivateSync(
               id: encodeOperationId(ledgerAccountId, privateOp.hash, "FEES"),
               hash: privateOp.hash,
               type: "FEES",
-              value: new BigNumber(0),
-              fee: new BigNumber(0),
+              value: privateOp.fee,
+              fee: privateOp.fee,
               senders: privateOp.senders,
               recipients: privateOp.recipients,
               blockHeight: privateOp.blockHeight,
@@ -475,6 +475,14 @@ export async function performPrivateSync(
             // Promote an existing non-FEES coin op (e.g. NONE) to FEES.
             parentCoinOp.id = encodeOperationId(ledgerAccountId, privateOp.hash, "FEES");
             parentCoinOp.type = "FEES";
+            parentCoinOp.value = privateOp.fee;
+          }
+          // Having a private OUT token op for this hash proves ownership of the spent input
+          // record (the record scanner already confirmed it). Fill in senders if missing —
+          // this covers the case where a fee_public coin op from the public sync has no
+          // senders set (the public API does not expose the sender of a fee deduction).
+          if (parentCoinOp.senders.every(s => !s)) {
+            parentCoinOp.senders = [address];
           }
         }
 
