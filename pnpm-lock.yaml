@@ -2364,12 +2364,21 @@ importers:
       '@ledgerhq/coin-solana':
         specifier: workspace:^
         version: link:../../libs/coin-modules/coin-solana
+      '@ledgerhq/context-module':
+        specifier: 1.17.1
+        version: 1.17.1(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2))
       '@ledgerhq/cryptoassets':
         specifier: workspace:^
         version: link:../../libs/ledgerjs/packages/cryptoassets
+      '@ledgerhq/device-intent':
+        specifier: workspace:^
+        version: link:../../libs/device-intent
       '@ledgerhq/device-management-kit':
         specifier: 'catalog:'
         version: 1.5.0(rxjs@7.8.2)
+      '@ledgerhq/device-signer-kit-ethereum':
+        specifier: 'catalog:'
+        version: 1.15.1(@ledgerhq/context-module@1.17.1(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2)))(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2))
       '@ledgerhq/errors':
         specifier: workspace:^
         version: link:../../libs/ledgerjs/packages/errors
@@ -2466,6 +2475,9 @@ importers:
       usb:
         specifier: 2.17.0
         version: 2.17.0(patch_hash=489095f60f30e6127e8077a75f64dc1962a7187d3e054910d61a8a5de45c30a5)
+      xstate:
+        specifier: 'catalog:'
+        version: 5.19.2
       yocto-spinner:
         specifier: 0.2.0
         version: 0.2.0
@@ -7709,6 +7721,9 @@ importers:
       '@ledgerhq/coin-xrp':
         specifier: 'catalog:'
         version: 7.21.5(@ledgerhq/errors@libs+ledgerjs+packages+errors)(@ledgerhq/live-network@libs+live-network)(@ledgerhq/logs@libs+ledgerjs+packages+logs)
+      '@ledgerhq/context-module':
+        specifier: 1.17.1
+        version: 1.17.1(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2))
       '@ledgerhq/cryptoassets':
         specifier: workspace:^
         version: link:../ledgerjs/packages/cryptoassets
@@ -7723,7 +7738,7 @@ importers:
         version: 1.5.0(rxjs@7.8.2)
       '@ledgerhq/device-signer-kit-ethereum':
         specifier: 'catalog:'
-        version: 1.15.1(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2))
+        version: 1.15.1(@ledgerhq/context-module@1.17.1(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2)))(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2))
       '@ledgerhq/devices':
         specifier: workspace:*
         version: link:../ledgerjs/packages/devices
@@ -21294,7 +21309,7 @@ packages:
       metro-react-native-babel-preset: '*'
       react: 19.0.0
       react-dom: 19.0.0
-      webpack: ^5.89.0
+      webpack: '*'
     peerDependenciesMeta:
       '@react-native/babel-preset':
         optional: true
@@ -23574,7 +23589,7 @@ packages:
     resolution: {integrity: sha512-/FQM1EDkTsf63Ub2C6O7GuYFDsSXUwsaZDurV0np41ocwq0jthUAYCmhBX9f+KwlaCgIuWyr/4WlUQUBfKfZog==}
     engines: {node: '>=6'}
     peerDependencies:
-      rxjs: ^5.5.10
+      rxjs: '*'
       zenObservable: '*'
     peerDependenciesMeta:
       rxjs:
@@ -44686,20 +44701,6 @@ snapshots:
   '@ledgerhq/device-signer-kit-ethereum@1.15.1(@ledgerhq/context-module@1.17.1(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2)))(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2))':
     dependencies:
       '@ledgerhq/context-module': 1.17.1(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2))
-      '@ledgerhq/device-management-kit': 1.5.0(rxjs@7.8.2)
-      '@ledgerhq/signer-utils': 1.2.0(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2))
-      ethers: 6.15.0
-      inversify: 7.5.1(reflect-metadata@0.2.2)
-      purify-ts: 2.1.0
-      reflect-metadata: 0.2.2
-      semver: 7.7.2
-      xstate: 5.19.2
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
-
-  '@ledgerhq/device-signer-kit-ethereum@1.15.1(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2))':
-    dependencies:
       '@ledgerhq/device-management-kit': 1.5.0(rxjs@7.8.2)
       '@ledgerhq/signer-utils': 1.2.0(@ledgerhq/device-management-kit@1.5.0(rxjs@7.8.2))
       ethers: 6.15.0
