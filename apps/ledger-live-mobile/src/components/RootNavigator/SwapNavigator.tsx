@@ -25,7 +25,6 @@ import { NavigationHeaderBackButton } from "../NavigationHeaderBackButton";
 import SwapCustomError from "~/screens/Swap/SubScreens/SwapCustomError";
 import { useWalletFeaturesConfig } from "@features/platform-feature-flags";
 import { useNotificationsContext } from "LLM/features/NotificationsPrompt";
-import { isGoingToSwapHistory } from "~/screens/Swap/navigation/navigateBackToSwapTab";
 
 // Constants for tracking sources
 const TRACKING_SOURCES = {
@@ -183,14 +182,6 @@ export default function SwapNavigator(
         options={{
           headerTitle: t("transfer.swap.title"),
           headerLeft: NullHeader,
-        }}
-        listeners={{
-          beforeRemove: ({ data }) => {
-            if (isGoingToSwapHistory(data.action.payload)) {
-              return;
-            }
-            notifyFlowCompleted("swap");
-          },
         }}
       />
 

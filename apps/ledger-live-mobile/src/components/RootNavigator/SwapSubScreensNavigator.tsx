@@ -10,10 +10,7 @@ import { OperationDetails, PendingOperation, SwapLoading } from "~/screens/Swap/
 import SwapCustomError from "~/screens/Swap/SubScreens/SwapCustomError";
 import { SwapSubScreensNavigatorParamList } from "./types/SwapSubScreensNavigator";
 import { useWalletFeaturesConfig } from "@features/platform-feature-flags";
-import {
-  isGoingToSwapHistory,
-  navigateBackToSwapTab,
-} from "~/screens/Swap/navigation/navigateBackToSwapTab";
+import { navigateBackToSwapTab } from "~/screens/Swap/navigation/navigateBackToSwapTab";
 import { useNotificationsContext } from "LLM/features/NotificationsPrompt";
 
 const Stack = createNativeStackNavigator<SwapSubScreensNavigatorParamList>();
@@ -80,14 +77,6 @@ export default function SwapSubScreensNavigator() {
         options={{
           headerTitle: t("transfer.swap.title"),
           headerLeft: NullHeader,
-        }}
-        listeners={{
-          beforeRemove: ({ data }) => {
-            if (isGoingToSwapHistory(data.action.payload)) {
-              return;
-            }
-            notifyFlowCompleted("swap");
-          },
         }}
       />
       <Stack.Screen

@@ -1,5 +1,5 @@
 import { CommonActions, useTheme } from "@react-navigation/native";
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { Trans } from "~/context/Locale";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,7 +16,12 @@ import { PendingOperationParamList } from "../types";
 import { SWAP_VERSION } from "../utils";
 import { NavigationHeaderCloseButton } from "~/components/NavigationHeaderCloseButton";
 import { useWalletFeaturesConfig } from "@features/platform-feature-flags";
-import { hasSwapTabRoute, navigateBackToSwapTab } from "../navigation/navigateBackToSwapTab";
+import {
+  handlePendingOperationBeforeRemove,
+  hasSwapTabRoute,
+  navigateBackToSwapTab,
+} from "../navigation/navigateBackToSwapTab";
+import { useNotificationsContext } from "LLM/features/NotificationsPrompt";
 
 export function PendingOperation({ route, navigation }: PendingOperationParamList) {
   const { colors } = useTheme();
@@ -25,6 +30,11 @@ export function PendingOperation({ route, navigation }: PendingOperationParamLis
   const { isEmbeddedSwap, sponsored } = route.params;
   const syncAccounts = useSyncAllAccounts();
   const supportsSwapTabRoute = hasSwapTabRoute(navigation.getState());
+  const { notifyFlowCompleted } = useNotificationsContext();
+  const allowRemovalRef = useRef(false);
+  const completeSwapFlow = useCallback(() => {
+    notifyFlowCompleted("swap");
+  }, [notifyFlowCompleted]);
 
   const navigateToSwapForm = useCallback(() => {
     track("button_clicked", {
@@ -33,11 +43,27 @@ export function PendingOperation({ route, navigation }: PendingOperationParamLis
       swapVersion: SWAP_VERSION,
     });
 
+    allowRemovalRef.current = true;
+    completeSwapFlow();
     navigateBackToSwapTab({
       navigation,
       shouldDisplayWallet40MainNav,
     });
-  }, [navigation, shouldDisplayWallet40MainNav]);
+  }, [completeSwapFlow, navigation, shouldDisplayWallet40MainNav]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", event => {
+      handlePendingOperationBeforeRemove({
+        event,
+        allowRemovalRef,
+        navigation,
+        onFlowCompleted: completeSwapFlow,
+        shouldDisplayWallet40MainNav,
+      });
+    });
+
+    return unsubscribe;
+  }, [completeSwapFlow, navigation, shouldDisplayWallet40MainNav]);
 
   useEffect(() => {
     navigation.setOptions({

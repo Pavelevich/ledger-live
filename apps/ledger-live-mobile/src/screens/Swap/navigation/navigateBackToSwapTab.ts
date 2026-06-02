@@ -17,6 +17,15 @@ type NavigationWithState = {
   goBack(): void;
 };
 
+type BeforeRemoveEvent = {
+  preventDefault(): void;
+  data: {
+    action: {
+      payload?: unknown;
+    };
+  };
+};
+
 export function hasSwapTabRoute(state: NavigationStateWithRouteNames | undefined) {
   const routeNames = state?.routeNames;
   return Array.isArray(routeNames) && routeNames.includes(ScreenName.SwapTab);
@@ -91,4 +100,30 @@ export function isGoingToSwapHistory(payload: unknown) {
   }
 
   return routes.some(route => route?.name === ScreenName.SwapHistory);
+}
+
+export function handlePendingOperationBeforeRemove({
+  event,
+  allowRemovalRef,
+  navigation,
+  shouldDisplayWallet40MainNav,
+  onFlowCompleted,
+}: {
+  event: BeforeRemoveEvent;
+  allowRemovalRef: { current: boolean };
+  navigation: NavigationWithState;
+  shouldDisplayWallet40MainNav: boolean;
+  onFlowCompleted: () => void;
+}) {
+  if (allowRemovalRef.current || isGoingToSwapHistory(event.data.action.payload)) {
+    return;
+  }
+
+  event.preventDefault();
+  allowRemovalRef.current = true;
+  onFlowCompleted();
+  navigateBackToSwapTab({
+    navigation,
+    shouldDisplayWallet40MainNav,
+  });
 }
