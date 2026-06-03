@@ -8,14 +8,42 @@ import type { AleoOperation, AleoOperationExtra, AleoTokenAccount } from "../typ
 import type { AleoPrivateTokenBalance } from "../types/logic";
 import { apiClient } from "../network/api";
 import { sdkClient } from "../network/sdk";
-import { EXPLORER_TRANSFER_TYPES, AMOUNT_ARG_INDEX } from "../constants";
+import {
+  EXPLORER_TRANSFER_TYPES,
+  PRIVATE_TRANSFER_FUNCTIONS,
+  SEMI_PUBLIC_TOKEN_FUNCTIONS,
+} from "../constants";
 import { mergeOps } from "@ledgerhq/ledger-wallet-framework/bridge/jsHelpers";
 import { promiseAllBatched } from "@ledgerhq/live-promise";
 import { getCryptoAssetsStore } from "@ledgerhq/cryptoassets/state";
 import type { AleoPrivateRecord } from "../types/api";
 
-function normalizeString(v: string): string {
+function normalizeAleoPlaintext(v: string): string {
   return v.trim().replace(/\.(private|public|constant)$/, "");
+}
+
+function isAleoAddressPlaintext(v: string): boolean {
+  return normalizeAleoPlaintext(v).toLowerCase().startsWith("aleo1");
+}
+
+function isAleoAmountPlaintext(v: string): boolean {
+  return /^\d+u\d+$/.test(normalizeAleoPlaintext(v));
+}
+
+function promoteCoinOpToFees({
+  coinOp,
+  fee,
+  ledgerAccountId,
+  txHash,
+}: {
+  coinOp: AleoOperation;
+  fee: BigNumber;
+  ledgerAccountId: string;
+  txHash: string;
+}): void {
+  coinOp.id = encodeOperationId(ledgerAccountId, txHash, "FEES");
+  coinOp.type = "FEES";
+  coinOp.value = fee;
 }
 
 /** CAL lookup by Aleo program name (contract address). Missing programs are omitted. */
@@ -54,7 +82,7 @@ function parseTokenBalance(balanceStr: string | null): BigNumber {
   if (!balanceStr) return new BigNumber(0);
 
   // Strip Aleo visibility suffixes (.private, .public, .constant) that appear in decrypted records
-  const normalized = normalizeString(balanceStr);
+  const normalized = normalizeAleoPlaintext(balanceStr);
 
   const directBalanceMatch = normalized.match(/^(\d+)u\d+$/);
   if (directBalanceMatch) {
@@ -205,9 +233,12 @@ export async function prepareTokenOperations({
     // account history shows the fee cost rather than a valueless NONE entry.
     // Only promotes once per hash — idempotent if multiple OUT sub-ops share a hash.
     if (type === "OUT" && parentCoinOp.type !== "FEES") {
-      parentCoinOp.id = encodeOperationId(ledgerAccountId, tokenOp.hash, "FEES");
-      parentCoinOp.type = "FEES";
-      parentCoinOp.value = tokenOp.fee;
+      promoteCoinOpToFees({
+        coinOp: parentCoinOp,
+        fee: tokenOp.fee,
+        ledgerAccountId,
+        txHash: tokenOp.hash,
+      });
     }
 
     parentCoinOp.subOperations = [...parentCoinOp.subOperations, subAccountOp];
@@ -458,15 +489,15 @@ async function getTokenOutDetailsFromTransition({
   // transfer_private_to_public and many token programs expose the recipient address
   // and (for Priv2Pub) the amount directly in plaintext, so scan these first.
   const plaintexts = transition.inputs.flatMap(inp =>
-    "value" in inp && inp.value ? [normalizeString(inp.value)] : [],
+    "value" in inp && inp.value ? [normalizeAleoPlaintext(inp.value)] : [],
   );
-  const recipient = plaintexts.find(v => v.includes("aleo")) ?? null;
+  const recipient = plaintexts.find(isAleoAddressPlaintext) ?? null;
 
   // For private_to_public the amount argument is already in plaintext at AMOUNT_ARG_INDEX.
   if (record.function_name === EXPLORER_TRANSFER_TYPES.PRIVATE_TO_PUBLIC) {
     // Amount is already in plaintext — scan inputs by pattern instead of assuming a
     // fixed argument index (token programs may differ from credits.aleo).
-    const amountStr = plaintexts.find(v => /^\d+u\d+$/.test(v)) ?? null;
+    const amountStr = plaintexts.find(isAleoAmountPlaintext) ?? null;
     return { amount: amountStr ? parseTokenBalance(amountStr) : null, recipient, fee };
   }
 
@@ -475,7 +506,9 @@ async function getTokenOutDetailsFromTransition({
   const decryptedPlaintexts = (
     await Promise.all(
       transition.inputs.map(async (inp, idx) => {
-        if (!("value" in inp) || !inp.value) return null;
+        const hasValue = "value" in inp && inp.value;
+        if (!hasValue) return null;
+
         try {
           const dec = await sdkClient.decryptCiphertext({
             currency,
@@ -494,9 +527,11 @@ async function getTokenOutDetailsFromTransition({
     )
   ).filter((p): p is string => p !== null);
 
-  const amountStr = decryptedPlaintexts.find(p => /^\d+u\d+/.test(p.trim())) ?? null;
+  const amountStr = decryptedPlaintexts.find(isAleoAmountPlaintext) ?? null;
   const resolvedRecipient =
-    recipient ?? decryptedPlaintexts.map(normalizeString).find(p => p.includes("aleo")) ?? null;
+    recipient ??
+    decryptedPlaintexts.map(normalizeAleoPlaintext).find(isAleoAddressPlaintext) ??
+    null;
 
   return {
     amount: amountStr ? parseTokenBalance(amountStr) : null,
@@ -525,19 +560,16 @@ export function filterHistoryRecords(
   return [
     ...new Map(
       records
-        .filter(r => {
-          if (!PRIVATE_TRANSFER_FUNCTIONS.has(r.function_name)) return false;
-          if (r.spent || r.sender !== address) return true;
-          // transfer_public_to_private: sender === address means you sent public → private to
-          // yourself (self-transfer). The private output record IS the IN side — include it.
-          // transfer_private_to_public: sender === address means this is the change record from
-          // a Priv2Pub transfer. Include it so the OUT side appears in the token sub-account.
-          return (
-            r.function_name === EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE ||
-            r.function_name === EXPLORER_TRANSFER_TYPES.PRIVATE_TO_PUBLIC
-          );
+        .filter(record => {
+          if (!PRIVATE_TRANSFER_FUNCTIONS.has(record.function_name)) return false;
+          if (record.spent || record.sender !== address) return true;
+          // * transfer_public_to_private: sender === address means you sent public -> private to yourself (self-transfer).
+          // the private output record IS the IN side — include it.
+          // * transfer_private_to_public: sender === address means this is the change record from a private -> public transfer.
+          // include it so the OUT side appears in the token sub-account.
+          return SEMI_PUBLIC_TOKEN_FUNCTIONS.has(record.function_name);
         })
-        .map(r => [r.commitment, r]),
+        .map(record => [record.commitment, record]),
     ).values(),
   ];
 }
@@ -554,11 +586,10 @@ export function buildPrivateTokenOp(
   // For all other functions, sender === address means you sent tokens OUT.
   const isPrivateSelfTransfer =
     record.function_name === EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE && record.sender === address;
-  const type: OperationType = isPrivateSelfTransfer
-    ? "IN"
-    : record.sender === address
-      ? "OUT"
-      : "IN";
+  let type: OperationType = record.sender === address ? "OUT" : "IN";
+  if (isPrivateSelfTransfer) {
+    type = "IN";
+  }
 
   const senders = type === "OUT" ? [address] : [record.sender];
   const recipients = type === "OUT" ? (recipient ? [recipient] : []) : [address];
@@ -654,34 +685,38 @@ export function patchTokenSubAccountOps({
 
     // Index ops that have private transactionType by hash so we can look them up in O(1).
     const privateOpsByHash = new Map<string, AleoOperation[]>();
+
     for (const op of ops) {
-      if (op.extra?.transactionType === "private") {
-        const bucket = privateOpsByHash.get(op.hash) ?? [];
-        bucket.push(op);
-        privateOpsByHash.set(op.hash, bucket);
-      }
+      if (op.extra?.transactionType !== "private") continue;
+      const bucket = privateOpsByHash.get(op.hash) ?? [];
+      bucket.push(op);
+      privateOpsByHash.set(op.hash, bucket);
     }
 
     const patchedOps = ops.map(op => {
-      if (!SEMI_PUBLIC_TOKEN_FUNCTIONS.has(op.extra?.functionId)) return op;
-      if (op.extra?.patched) return op;
+      if (!SEMI_PUBLIC_TOKEN_FUNCTIONS.has(op.extra?.functionId) || op.extra?.patched) return op;
 
       // Treat an empty array or an array of only empty strings as "missing".
-      const missingSenders = op.senders.every(s => !s);
-      const missingRecipients = op.recipients.every(r => !r);
+      const missingSenders = op.senders.every(sender => !sender);
+      const missingRecipients = op.recipients.every(recipient => !recipient);
       if (!missingSenders && !missingRecipients) return op;
 
       // Only patch when we already have a private op for this hash — no API calls.
       const privateOps = privateOpsByHash.get(op.hash);
       if (!privateOps?.length) return op;
 
-      const privateOp = privateOps[0];
+      const privateOp =
+        privateOps.find(
+          candidate =>
+            (!missingSenders || candidate.senders.some(Boolean)) &&
+            (!missingRecipients || candidate.recipients.some(Boolean)),
+        ) ?? privateOps[0];
+
       return {
         ...op,
-        senders:
-          missingSenders && privateOp.senders.some(s => !!s) ? privateOp.senders : op.senders,
+        senders: missingSenders && privateOp.senders.some(Boolean) ? privateOp.senders : op.senders,
         recipients:
-          missingRecipients && privateOp.recipients.some(r => !!r)
+          missingRecipients && privateOp.recipients.some(Boolean)
             ? privateOp.recipients
             : op.recipients,
         extra: { ...op.extra, patched: true },
@@ -701,14 +736,19 @@ export function patchTokenSubAccountOps({
  *
  * Mutates `operations` in place (may push new FEES ops) and returns it.
  */
-
-function ensureFeesParentCoinOp(
-  privateOp: AleoOperation,
-  coinOpsByHash: Map<string, AleoOperation>,
-  operations: AleoOperation[],
-  ledgerAccountId: string,
-  address: string,
-): AleoOperation {
+function ensureFeesParentCoinOp({
+  privateOp,
+  coinOpsByHash,
+  operations,
+  ledgerAccountId,
+  address,
+}: {
+  privateOp: AleoOperation;
+  coinOpsByHash: Map<string, AleoOperation>;
+  operations: AleoOperation[];
+  ledgerAccountId: string;
+  address: string;
+}): AleoOperation {
   let coinOp = coinOpsByHash.get(privateOp.hash);
 
   if (!coinOp) {
@@ -730,12 +770,15 @@ function ensureFeesParentCoinOp(
     operations.push(coinOp);
     coinOpsByHash.set(privateOp.hash, coinOp);
   } else if (coinOp.type !== "FEES") {
-    coinOp.id = encodeOperationId(ledgerAccountId, privateOp.hash, "FEES");
-    coinOp.type = "FEES";
-    coinOp.value = privateOp.fee;
+    promoteCoinOpToFees({
+      coinOp,
+      fee: privateOp.fee,
+      ledgerAccountId,
+      txHash: privateOp.hash,
+    });
   }
 
-  if (coinOp.senders.every(s => !s)) {
+  if (coinOp.senders.every(sender => !sender)) {
     coinOp.senders = [address];
   }
 
@@ -759,7 +802,13 @@ export function attachPrivateTokenOpsToParent({
     for (const privateOp of privateOps) {
       const parentCoinOp =
         privateOp.type === "OUT"
-          ? ensureFeesParentCoinOp(privateOp, coinOpsByHash, operations, ledgerAccountId, address)
+          ? ensureFeesParentCoinOp({
+              privateOp,
+              coinOpsByHash,
+              operations,
+              ledgerAccountId,
+              address,
+            })
           : coinOpsByHash.get(privateOp.hash);
 
       if (!parentCoinOp) continue;
@@ -793,8 +842,8 @@ export function accumulateOp(
       amount,
       record,
       tokenInfo,
-      ...(recipient !== undefined && { recipient }),
-      ...(fee !== undefined && { fee }),
+      ...(typeof recipient === "string" && { recipient }),
+      ...(!!fee && { fee }),
     });
   }
 }
@@ -883,11 +932,11 @@ export async function buildSubAccountsFromPrivateRecords({
     // Private self-transfer: the private record is the received output — decrypt it directly.
     // All other sender===address cases are OUT events (Priv2Pub change record, etc.) where
     // the record amount is the pre-send balance, so we read the transferred amount from inputs.
-    const isPrivateSelfTransfer =
-      record.function_name === EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE &&
-      record.sender === address;
+    const isOutgoingRecord =
+      record.sender === address &&
+      record.function_name !== EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE;
 
-    if (record.sender === address && !isPrivateSelfTransfer) {
+    if (isOutgoingRecord) {
       // OUT: read the actual sent amount and recipient address from the transition inputs.
       const outDetails = await getTokenOutDetailsFromTransition({ currency, record, viewKey });
       if (outDetails.amount === null) {

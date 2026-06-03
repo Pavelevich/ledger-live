@@ -10,6 +10,7 @@ import {
   EXPLORER_TRANSFER_TYPES,
   PROGRAM_ID,
   RECIPIENT_ARG_INDEX,
+  TOKEN_RECORD_NAME,
 } from "../constants";
 import { sdkClient } from "../network/sdk";
 import type {
@@ -362,9 +363,9 @@ async function enrichOutgoingRecord({
     };
   }
 
-  const isTokenProgram = TOKENS_PROGRAMS.some(p => p === rawRecord.program_name);
-  const recipientOutputIndex = isTokenProgram ? RECIPIENT_ARG_INDEX - 1 : RECIPIENT_ARG_INDEX;
-  const amountOutputIndex = isTokenProgram ? AMOUNT_ARG_INDEX - 1 : AMOUNT_ARG_INDEX;
+  const isTokenRecord = rawRecord.record_name.toLowerCase() === TOKEN_RECORD_NAME.toLowerCase();
+  const recipientOutputIndex = isTokenRecord ? RECIPIENT_ARG_INDEX - 1 : RECIPIENT_ARG_INDEX;
+  const amountOutputIndex = isTokenRecord ? AMOUNT_ARG_INDEX - 1 : AMOUNT_ARG_INDEX;
 
   const [recipientData, amountData] = await Promise.all([
     sdkClient.decryptCiphertext({
@@ -608,12 +609,8 @@ export const patchPublicOperations = async ({
         operation.extra.functionId === EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE
       ) {
         const shouldMarkAsPatched = latestPrivateRecordBlockHeight >= txDetails.block_height;
-
-        const isTokenOp = !!operation.extra.tokenInfo?.programId;
-        const programId = isTokenOp
-          ? (operation.extra.tokenInfo?.programId ?? PROGRAM_ID.CREDITS)
-          : PROGRAM_ID.CREDITS;
-        const outputIndex = isTokenOp ? 0 : 0;
+        const programId =
+          operation.extra.tokenInfo?.programId ?? recordTransition.program ?? PROGRAM_ID.CREDITS;
 
         const recipientData = await sdkClient.decryptCiphertext({
           currency,
@@ -622,7 +619,7 @@ export const patchPublicOperations = async ({
           viewKey,
           programId,
           functionName: EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE,
-          outputIndex,
+          outputIndex: 0,
         });
 
         patchedOperations.push({
