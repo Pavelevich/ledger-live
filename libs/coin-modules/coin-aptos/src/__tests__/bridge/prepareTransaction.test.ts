@@ -71,6 +71,24 @@ describe("Aptos prepareTransaction", () => {
       expect(result.errors).toEqual({});
     });
 
+    it("should estimate gas against a zeroed amount when useAllAmount is true", async () => {
+      transaction.recipient = "test-recipient";
+      transaction.useAllAmount = true;
+      // amount leaked in from a previous step (e.g. the Amount screen storing the prepared max)
+      transaction.amount = new BigNumber(900);
+      (getMaxSendBalance as jest.Mock).mockReturnValue(new BigNumber(900));
+      (getEstimatedGas as jest.Mock).mockResolvedValue({
+        fees: new BigNumber(2000),
+        estimate: { maxGasAmount: new BigNumber(200), gasUnitPrice: new BigNumber(10) },
+        errors: {},
+      });
+
+      await prepareTransaction(account, transaction);
+
+      const [, estimationTransaction] = (getEstimatedGas as jest.Mock).mock.calls[0];
+      expect(estimationTransaction.amount.isZero()).toBe(true);
+    });
+
     it("should call getEstimatedGas and set the transaction fees, estimate, and errors", async () => {
       transaction.recipient = "test-recipient";
       transaction.amount = new BigNumber(100);

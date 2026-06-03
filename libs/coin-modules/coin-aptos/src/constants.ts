@@ -113,5 +113,5 @@ export enum TOKEN_TYPE {
   FUNGIBLE_ASSET = "fungible_asset",
 }
 
-export const DEFAULT_GAS = new BigNumber(200);
+export const DEFAULT_GAS = new BigNumber(400);
 export const DEFAULT_GAS_PRICE = new BigNumber(100);

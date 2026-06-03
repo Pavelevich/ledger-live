@@ -45,7 +45,7 @@ describe("estimateMaxSpendable Test", () => {
         account,
       });
 
-      const expected = new BigNumber(80000);
+      const expected = new BigNumber(60000);
 
       expect(result.isEqualTo(expected)).toBe(true);
     });
@@ -106,7 +106,7 @@ describe("estimateMaxSpendable Test", () => {
         transaction,
       });
 
-      const expected = new BigNumber(80000);
+      const expected = new BigNumber(60000);
       expect(result).toStrictEqual(expected);
     });
   });
