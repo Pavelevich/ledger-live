@@ -93,15 +93,9 @@ function getRsdoctorPlugin() {
   const { RsdoctorRspackPlugin } = require("@rsdoctor/rspack-plugin");
   const isCI = process.env.CI === "true" || process.env.CI === "1";
   const reportDir = path.join(projectRootDir, "rsdoctor", "mobile");
-  // Rsdoctor's loader interceptor crashes on Rspack v2's native resolver
-  // ("Given napi value is not an array on NapiResolveOptions.fallback") because of the
-  // resolve.fallback object below. Disable loader analysis until a fixed Rsdoctor
-  // ships; bundle analysis (the PR report) is unaffected.
-  const features = { loader: false };
   const options = isCI
     ? {
         disableClientServer: true,
-        features,
         linter: RSDOCTOR_LINTER,
         output: {
           mode: "brief",
@@ -110,7 +104,6 @@ function getRsdoctorPlugin() {
         },
       }
     : {
-        features,
         linter: RSDOCTOR_LINTER,
         output: {
           mode: "brief",
