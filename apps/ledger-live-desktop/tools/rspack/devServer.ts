@@ -40,7 +40,6 @@ export async function createDevServer(options: DevServerOptions): Promise<Rspack
     static: {
       directory: path.join(lldRoot, "src", "renderer"),
       publicPath: "/",
-      watch: false,
     },
     headers: {
       "Access-Control-Allow-Origin": "*",
