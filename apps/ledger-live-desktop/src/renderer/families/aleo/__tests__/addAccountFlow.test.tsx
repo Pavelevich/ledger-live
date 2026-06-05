@@ -1,6 +1,5 @@
 import React from "react";
 import { Observable, Subject } from "rxjs";
-import { setEnv } from "@ledgerhq/live-env";
 import type { Account } from "@ledgerhq/types-live";
 import { act, render, screen, userEvent } from "tests/testSetup";
 import { urls } from "~/config/urls";
@@ -190,7 +189,6 @@ describe("ModularDrawerAddAccountFlowManager", () => {
     jest.mocked(track).mockReset();
     jest.mocked(trackPage).mockReset();
     progress$ = new Subject();
-    setEnv("EXPERIMENTAL_CURRENCIES", "aleo");
   });
 
   afterEach(() => {

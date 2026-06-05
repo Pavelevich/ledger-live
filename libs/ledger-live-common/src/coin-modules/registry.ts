@@ -1,8 +1,30 @@
 import { CurrencyNotSupported } from "@ledgerhq/errors";
+import { getCryptoCurrencyById } from "@ledgerhq/cryptoassets";
+import type { CryptoCurrency, CryptoCurrencyId } from "@ledgerhq/types-cryptoassets";
 import type { CoinModuleLoader, MockAccountModule } from "./types";
 import type { AccountBridgeExtensions } from "@ledgerhq/types-live";
 
 const loaders = new Map<string, CoinModuleLoader>();
+
+// Caches derived from the registered loaders' supportedCoins, invalidated on registry change.
+let supportedIds: Set<CryptoCurrencyId> | null = null;
+let supportedCurrencies: CryptoCurrency[] | null = null;
+
+function getSupportedIds(): Set<CryptoCurrencyId> {
+  if (!supportedIds) {
+    const ids = new Set<CryptoCurrencyId>();
+    for (const loader of loaders.values()) {
+      for (const id of loader.supportedCoins) ids.add(id);
+    }
+    supportedIds = ids;
+  }
+  return supportedIds;
+}
+
+function invalidateSupportedCaches() {
+  supportedIds = null;
+  supportedCurrencies = null;
+}
 
 function getLoader(family: string): CoinModuleLoader {
   const loader = loaders.get(family);
@@ -37,10 +59,33 @@ export function makeLoaderCache<T>(fn: (family: string) => Promise<T> | undefine
 
 export function registerCoinModules(modules: CoinModuleLoader[]): void {
   for (const mod of modules) loaders.set(mod.family, mod);
+  invalidateSupportedCaches();
 }
 
 export function getRegisteredFamilies(): string[] {
   return [...loaders.keys()];
+}
+
+export function isCoinModuleRegistered(family: string): boolean {
+  return loaders.has(family);
+}
+
+export function isCurrencySupported(currency: CryptoCurrency): boolean {
+  return getSupportedIds().has(currency.id);
+}
+
+export function listSupportedCurrencies(): CryptoCurrency[] {
+  if (!supportedCurrencies) {
+    supportedCurrencies = [...getSupportedIds()].map(getCryptoCurrencyById);
+  }
+  return supportedCurrencies.slice(); // copy: callers must not mutate the shared cache
+}
+
+/** Test-only: clear the registry so a test can register exactly the loaders it needs. */
+export function resetCoinModulesForTests(): void {
+  loaders.clear();
+  supportedIds = null;
+  supportedCurrencies = null;
 }
 
 export const loadSetupForFamily = makeLoaderCache(family => getLoader(family).loadSetup());

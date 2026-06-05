@@ -1,7 +1,11 @@
 import { CurrencyNotSupported } from "@ledgerhq/errors";
+import { getCryptoCurrencyById } from "@ledgerhq/cryptoassets";
 import {
   registerCoinModules,
   getRegisteredFamilies,
+  isCurrencySupported,
+  listSupportedCurrencies,
+  resetCoinModulesForTests,
   makeLoaderCache,
   loadSetupForFamily,
   loadTransactionForFamily,
@@ -29,6 +33,7 @@ const makeLoader = (
   overrides: Partial<CoinModuleLoader> = {},
 ): CoinModuleLoader => ({
   family,
+  supportedCoins: [],
   loadSetup: () => Promise.resolve(stubSetup),
   loadTransaction: () => Promise.resolve(stubTxModule),
   ...overrides,
@@ -40,6 +45,44 @@ describe("registerCoinModules / getRegisteredFamilies", () => {
     expect(getRegisteredFamilies()).toEqual(
       expect.arrayContaining(["__regtest_a__", "__regtest_b__"]),
     );
+  });
+});
+
+describe("supported currencies", () => {
+  beforeEach(() => resetCoinModulesForTests());
+  afterEach(() => resetCoinModulesForTests());
+
+  it("derives the supported set from a loader's supportedCoins", () => {
+    registerCoinModules([makeLoader("bitcoin", { supportedCoins: ["bitcoin", "litecoin"] })]);
+    expect(isCurrencySupported(getCryptoCurrencyById("bitcoin"))).toBe(true);
+    expect(isCurrencySupported(getCryptoCurrencyById("litecoin"))).toBe(true);
+    expect(isCurrencySupported(getCryptoCurrencyById("ethereum"))).toBe(false);
+  });
+
+  it("listSupportedCurrencies unions all registered loaders", () => {
+    registerCoinModules([
+      makeLoader("bitcoin", { supportedCoins: ["bitcoin"] }),
+      makeLoader("evm", { supportedCoins: ["ethereum", "polygon"] }),
+    ]);
+    expect(listSupportedCurrencies().map(c => c.id).sort()).toEqual([
+      "bitcoin",
+      "ethereum",
+      "polygon",
+    ]);
+  });
+
+  it("recomputes after a new registration (cache invalidation)", () => {
+    registerCoinModules([makeLoader("bitcoin", { supportedCoins: ["bitcoin"] })]);
+    expect(isCurrencySupported(getCryptoCurrencyById("ethereum"))).toBe(false);
+    registerCoinModules([makeLoader("evm", { supportedCoins: ["ethereum"] })]);
+    expect(isCurrencySupported(getCryptoCurrencyById("ethereum"))).toBe(true);
+  });
+
+  it("resetCoinModulesForTests clears the supported set", () => {
+    registerCoinModules([makeLoader("bitcoin", { supportedCoins: ["bitcoin"] })]);
+    resetCoinModulesForTests();
+    expect(listSupportedCurrencies()).toEqual([]);
+    expect(isCurrencySupported(getCryptoCurrencyById("bitcoin"))).toBe(false);
   });
 });
 

@@ -18,7 +18,7 @@ import { ModularDialogFlowManagerProps } from "./types";
 import modularDialogReducer, { openDialog } from "~/renderer/reducers/modularDialog";
 import { useDispatch } from "LLD/hooks/redux";
 import { setEnv } from "@ledgerhq/live-env";
-import { setSupportedCurrencies } from "@ledgerhq/ledger-wallet-framework/currencies/support";
+import { registerAllCoins } from "@ledgerhq/live-common/coin-modules/load-all-coins";
 import {
   makeMockedFeatureFlagsProviderWrapper,
   makeMockedContextValue,
@@ -26,7 +26,7 @@ import {
 
 setEnv("MOCK", "true");
 
-setSupportedCurrencies(["ethereum", "arbitrum", "bitcoin"]);
+registerAllCoins();
 
 const mockedFeatureFlags = {
   lldModularDrawer: { enabled: true, params: { enableModularization: true } },
