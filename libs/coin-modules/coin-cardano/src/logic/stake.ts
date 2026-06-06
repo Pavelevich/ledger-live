@@ -1,4 +1,9 @@
-import type { AssetInfo, Stake, StakeAction, StakeState } from "@ledgerhq/coin-module-framework/api/index";
+import type {
+  AssetInfo,
+  Stake,
+  StakeAction,
+  StakeState,
+} from "@ledgerhq/coin-module-framework/api/index";
 import type { CryptoCurrency } from "@ledgerhq/types-cryptoassets";
 import BigNumber from "bignumber.js";
 import { getDelegationInfo } from "../api/getDelegationInfo";

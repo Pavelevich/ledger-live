@@ -57,6 +57,10 @@ export const coinModuleLoaders: CoinModuleLoader[] = [
       import("@ledgerhq/coin-cardano/deviceTransactionConfig").then(m => m.default),
     loadAccount: () => import("@ledgerhq/coin-cardano/account").then(m => m.default),
     loadMockBridge: () => import("../families/cardano/bridge/mock.js").then(m => m.default),
+    loadValidateAddress: () =>
+      import("@ledgerhq/coin-cardano/logic/validateAddress").then(
+        ({ validateAddress }): ValidateAddressFn => validateAddress,
+      ),
   },
   {
     family: "casper",

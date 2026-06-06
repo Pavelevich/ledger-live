@@ -7,6 +7,9 @@ export async function getBridgeApi(currency: CryptoCurrency, network: string): P
       return (await import("./families/evm/bridge.js")).default(currency);
     case "solana":
       return (await import("./families/solana/bridge.js")).default(currency);
+    case "cardano":
+    case "cardano_testnet":
+      return (await import("./families/cardano/bridge.js")).default(currency);
     case "stellar":
       return (await import("./families/stellar/bridge.js")).default;
     case "tezos":

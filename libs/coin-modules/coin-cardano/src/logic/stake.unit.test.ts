@@ -52,7 +52,11 @@ describe("buildStake", () => {
   });
 
   it("maps an active delegation's pool to delegate and metadata to details", () => {
-    const stake = buildStake(STAKING_ADDRESS, STAKE_KEY, getDelegationFixture({ dRepHex: "drep1abc" }));
+    const stake = buildStake(
+      STAKING_ADDRESS,
+      STAKE_KEY,
+      getDelegationFixture({ dRepHex: "drep1abc" }),
+    );
 
     expect(stake).toMatchObject({
       state: "active",
@@ -64,7 +68,11 @@ describe("buildStake", () => {
   it("treats a registered key with no pool as not staking (keys on poolId, not status)", () => {
     // status: true (registered) but no poolId and no rewards → no position; a position is staking
     // only once delegated to a pool, not merely once the stake key is registered.
-    const stake = buildStake(STAKING_ADDRESS, STAKE_KEY, getDelegationFixture({ poolId: undefined }));
+    const stake = buildStake(
+      STAKING_ADDRESS,
+      STAKE_KEY,
+      getDelegationFixture({ poolId: undefined }),
+    );
     expect(stake).toBeUndefined();
   });
 
