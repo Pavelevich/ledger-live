@@ -471,8 +471,14 @@ export async function performPrivateSync(
       ledgerAccountId,
       address,
     });
+
     operations.sort((a, b) => b.date.getTime() - a.date.getTime());
   }
+
+  const finalSubAccounts = config.enableTokens ? mergedSubAccounts : [];
+  const finalOperations = config.enableTokens
+    ? operations
+    : operations.filter(op => (op.subOperations ?? []).length === 0);
 
   onProgress?.(PROGRESS_DONE);
 
@@ -482,10 +488,10 @@ export async function performPrivateSync(
     balance: totalBalance,
     spendableBalance: totalBalance,
     blockHeight,
-    operations,
-    operationsCount: operations.length,
+    operations: finalOperations,
+    operationsCount: finalOperations.length,
     lastSyncDate: initialAccount?.lastSyncDate,
-    subAccounts: config.enableTokens ? mergedSubAccounts : [],
+    subAccounts: finalSubAccounts,
     aleoResources: {
       transparentBalance,
       provableApi,

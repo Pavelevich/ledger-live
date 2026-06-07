@@ -295,26 +295,41 @@ function hasValueField(
   return Boolean(input && "value" in input);
 }
 
-function getTransferArguments(
-  recordTransition: AleoTransition,
-  transactionId: string,
-): {
+function getTransferArguments({
+  isTokenRecord,
+  recordTransition,
+  transactionId,
+}: {
+  isTokenRecord: boolean;
+  recordTransition: AleoTransition;
+  transactionId: string;
+}): {
   recipientArgument: AleoTransitionInputWithValue;
   amountArgument: AleoTransitionInputWithValue;
 } | null {
-  if (recordTransition.inputs.length <= AMOUNT_ARG_INDEX) {
-    log(
-      "aleo/sync",
-      `enrichPrivateRecord: transition has only ${recordTransition.inputs.length} inputs, expected at least ${AMOUNT_ARG_INDEX + 1} for tx ${transactionId}`,
-    );
-    return null;
-  }
-
   // Recipient and amount are contract function arguments, so their inputs must have a `value` field.
   // Other input (missing `value` field) would indicate unexpected API data.
   // In that case we skip processing rather than crash.
-  const recipientInput = recordTransition.inputs[RECIPIENT_ARG_INDEX] ?? null;
-  const amountInput = recordTransition.inputs[AMOUNT_ARG_INDEX] ?? null;
+  const recipientOutputIndex = isTokenRecord ? RECIPIENT_ARG_INDEX - 1 : RECIPIENT_ARG_INDEX;
+  const amountOutputIndex = isTokenRecord ? AMOUNT_ARG_INDEX - 1 : AMOUNT_ARG_INDEX;
+
+  if (recordTransition.inputs.length <= amountOutputIndex) {
+    log(
+      "aleo/sync",
+      `enrichPrivateRecord: transition has only ${recordTransition.inputs.length} inputs, expected at least ${amountOutputIndex + 1} for tx ${transactionId}`,
+    );
+
+    console.error("aleo/sync", `enrichPrivateRecord: invalid transition inputs`, {
+      isTokenRecord,
+      recordTransition,
+      transactionId,
+    });
+
+    return null;
+  }
+
+  const recipientInput = recordTransition.inputs[recipientOutputIndex] ?? null;
+  const amountInput = recordTransition.inputs[amountOutputIndex] ?? null;
 
   if (!hasValueField(recipientInput) || !hasValueField(amountInput)) {
     log("aleo/sync", `enrichPrivateRecord: invalid transition arguments for tx ${transactionId}`);
@@ -342,7 +357,13 @@ async function enrichOutgoingRecord({
   viewKey: string;
   address: string;
 }): Promise<EnrichedRecordData | null> {
-  const transferArguments = getTransferArguments(recordTransition, transactionId);
+  const isTokenRecord = rawRecord.record_name.toLowerCase() === TOKEN_RECORD_NAME.toLowerCase();
+  const transferArguments = getTransferArguments({
+    isTokenRecord,
+    recordTransition,
+    transactionId,
+  });
+
   if (!transferArguments) {
     return null;
   }
@@ -363,7 +384,6 @@ async function enrichOutgoingRecord({
     };
   }
 
-  const isTokenRecord = rawRecord.record_name.toLowerCase() === TOKEN_RECORD_NAME.toLowerCase();
   const recipientOutputIndex = isTokenRecord ? RECIPIENT_ARG_INDEX - 1 : RECIPIENT_ARG_INDEX;
   const amountOutputIndex = isTokenRecord ? AMOUNT_ARG_INDEX - 1 : AMOUNT_ARG_INDEX;
 
@@ -413,13 +433,14 @@ async function enrichIncomingRecord({
     ciphertext: rawRecord.record_ciphertext,
     viewKey,
   });
-  const microcredits = outputRecord.data?.microcredits;
+  const microcredits = outputRecord.data?.microcredits ?? outputRecord.data?.amount;
 
   if (!microcredits) {
     log(
       "aleo/sync",
       `enrichPrivateRecord: microcredits missing in decrypted record for tx ${transactionId}`,
     );
+
     return null;
   }
 

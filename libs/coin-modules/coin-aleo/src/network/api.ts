@@ -43,29 +43,6 @@ async function getAccountBalance(
 }
 
 /**
- * Fetches the public balance of a registry token for a given pre-computed mapping key.
- * The balance is stored in token_registry.aleo/authorized_balances mapping,
- * keyed by BHP256::hash_to_field(TokenOwner { token_id, account }).
- *
- * @param currency - The Aleo currency
- * @param mappingKey - The pre-computed BHP256 hash key
- * @returns The balance in raw units (u128) or null if no balance exists
- */
-async function getRegistryTokenBalance(
-  currency: CryptoCurrency,
-  mappingKey: string,
-): Promise<string | null> {
-  const { nodeUrl, networkType } = getNetworkConfig(currency);
-
-  const res = await network<string | null>({
-    method: "GET",
-    url: `${nodeUrl}/v2/${networkType}/program/${PROGRAM_ID.TOKEN_REGISTRY}/mapping/authorized_balances/${mappingKey}`,
-  });
-
-  return res.data;
-}
-
-/**
  * Fetches the public balance of an address-mapped token program
  * (e.g. usdcx_stablecoin.aleo, usad_stablecoin.aleo) for a given address.
  *
@@ -345,7 +322,6 @@ async function submitEncryptedDelegatedProvingRequest({
 export const apiClient = {
   getLatestBlock,
   getAccountBalance,
-  getRegistryTokenBalance,
   getProgramTokenBalance,
   getTransactionById,
   getAccountPublicTransactions,

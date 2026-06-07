@@ -408,43 +408,6 @@ describe("apiClient", () => {
     });
   });
 
-  describe("getRegistryTokenBalance", () => {
-    const mockHash =
-      "8794961499902278867346265179165953632189049102868703723554538478683860291980field";
-
-    it("should fetch registry token balance using a precomputed mapping key", async () => {
-      const mockMappingValue = `{
-  token_id: 4697275201844475848710842677807162058146139844643350200269139278887318953049field,
-  account: aleo1dtadcxqsjp4fvvafv4ynlq9mp5vgwsap7djlzell8ngag7pj3uysdlhxjs,
-  balance: 2u128,
-  authorized_until: 4294967295u32
-}`;
-      jest.mocked(network).mockResolvedValue({ data: mockMappingValue, status: 200 });
-
-      const result = await apiClient.getRegistryTokenBalance(mockCurrency, mockHash);
-
-      expect(network).toHaveBeenCalledTimes(1);
-      expect(network).toHaveBeenCalledWith({
-        method: "GET",
-        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/program/token_registry.aleo/mapping/authorized_balances/${mockHash}`,
-      });
-      expect(result).toBe(mockMappingValue);
-    });
-
-    it("should return null when no balance exists", async () => {
-      jest.mocked(network).mockResolvedValue({ data: null, status: 200 });
-
-      const result = await apiClient.getRegistryTokenBalance(mockCurrency, mockHash);
-
-      expect(result).toBeNull();
-      expect(network).toHaveBeenCalledTimes(1);
-      expect(network).toHaveBeenCalledWith({
-        method: "GET",
-        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/program/token_registry.aleo/mapping/authorized_balances/${mockHash}`,
-      });
-    });
-  });
-
   describe("getProgramTokenBalance", () => {
     const mockAddress = "aleo1test123address456";
     const mockProgramId = "usad_stablecoin.aleo";

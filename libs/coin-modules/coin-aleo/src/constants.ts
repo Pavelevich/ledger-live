@@ -1,6 +1,5 @@
 export const PROGRAM_ID = {
   CREDITS: "credits.aleo",
-  TOKEN_REGISTRY: "token_registry.aleo",
 };
 
 export const EXPLORER_TRANSFER_TYPES = {

@@ -164,10 +164,9 @@ export type AleoOperationExtra = {
   transactionType: AleoTransactionType;
   // this field is used to indicate that semi-public operation has been patched with private data after private sync
   patched?: boolean;
-  // FIXME: possibly something we can remove with CAL
+  // this field is used to store the token information for token operations
   tokenInfo?: {
     programId: string;
-    tokenId: string | null; // Present only for registry tokens (via token_registry.aleo)
   };
 };
 

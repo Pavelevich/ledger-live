@@ -46,12 +46,13 @@ import type {
   AleoTransactionIntent,
 } from "../types";
 
-export function parseMicrocredits(microcreditsU64: string): string {
-  const value = microcreditsU64.split(".")[0];
-  const expectedSuffix = "u64";
-  const hasValidSuffix = value.endsWith(expectedSuffix);
-  invariant(hasValidSuffix, `aleo: invalid microcredits format (${microcreditsU64})`);
-  return value.replace(expectedSuffix, "");
+const MICROCREDITS_REGEX = /^(\d+)u\d+$/;
+
+export function parseMicrocredits(microcredits: string): string {
+  const value = microcredits.split(".")[0];
+  const match = value.match(MICROCREDITS_REGEX);
+  invariant(match, `aleo: invalid microcredits format (${microcredits})`);
+  return match[1];
 }
 
 export function getNetworkConfig(currency: CryptoCurrency) {
@@ -225,7 +226,6 @@ export const toBridgeOperation = (
       ...(isTokenTx && {
         tokenInfo: {
           programId: rawTx.program_id,
-          tokenId: rawTx.token_id && rawTx.token_id !== "0" ? rawTx.token_id : null,
         },
       }),
     },

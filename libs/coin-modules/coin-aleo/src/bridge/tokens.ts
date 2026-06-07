@@ -550,26 +550,13 @@ type TxOpEntry = {
 };
 
 /**
- * Deduplicates private records by commitment, excludes unspent change records
- * (sender === address, not yet re-spent), and excludes non-transfer records
- * (split, join, fee_private, etc.) that do not represent token movements.
+ * Deduplicates private records by commitment and excludes non-transfer records (split, join, fee_private, etc.) that do not represent token movements.
  */
-export function filterHistoryRecords(
-  records: AleoPrivateRecord[],
-  address: string,
-): AleoPrivateRecord[] {
+export function filterHistoryRecords(records: AleoPrivateRecord[]): AleoPrivateRecord[] {
   return [
     ...new Map(
       records
-        .filter(record => {
-          if (!PRIVATE_TRANSFER_FUNCTIONS.has(record.function_name)) return false;
-          if (record.spent || record.sender !== address) return true;
-          // * transfer_public_to_private: sender === address means you sent public -> private to yourself (self-transfer).
-          // the private output record IS the IN side — include it.
-          // * transfer_private_to_public: sender === address means this is the change record from a private -> public transfer.
-          // include it so the OUT side appears in the token sub-account.
-          return SEMI_PUBLIC_TOKEN_FUNCTIONS.has(record.function_name);
-        })
+        .filter(record => PRIVATE_TRANSFER_FUNCTIONS.has(record.function_name))
         .map(record => [record.commitment, record]),
     ).values(),
   ];
@@ -651,6 +638,7 @@ export function withPrivateBalance(
     isExisting && subAccount.operations.length > 0
       ? (mergeOps(subAccount.operations, newPrivateOps) as AleoOperation[])
       : newPrivateOps;
+
   return {
     ...subAccount,
     transparentBalance,
@@ -823,16 +811,25 @@ export function attachPrivateTokenOpsToParent({
   return operations;
 }
 
-export function accumulateOp(
-  opAccumulator: Map<string, Map<string, TxOpEntry>>,
-  tokenAccountId: string,
-  txId: string,
-  amount: BigNumber,
-  record: AleoPrivateRecord,
-  tokenInfo: NonNullable<AleoOperationExtra["tokenInfo"]>,
-  recipient?: string,
-  fee?: BigNumber,
-): void {
+export function accumulateOp({
+  opAccumulator,
+  tokenAccountId,
+  txId,
+  amount,
+  record,
+  tokenInfo,
+  recipient,
+  fee,
+}: {
+  opAccumulator: Map<string, Map<string, TxOpEntry>>;
+  tokenAccountId: string;
+  txId: string;
+  amount: BigNumber;
+  record: AleoPrivateRecord;
+  tokenInfo: NonNullable<AleoOperationExtra["tokenInfo"]>;
+  recipient?: string;
+  fee?: BigNumber;
+}): void {
   if (!opAccumulator.has(tokenAccountId)) opAccumulator.set(tokenAccountId, new Map());
   const txMap = opAccumulator.get(tokenAccountId)!;
   const existing = txMap.get(txId);
@@ -888,6 +885,7 @@ export async function buildSubAccountsFromPrivateRecords({
         ciphertext: record.record_ciphertext,
         viewKey,
       });
+
       const rawAmount =
         decrypted.data?.amount ?? decrypted.data?.balance ?? decrypted.data?.microcredits;
       const amount = parseTokenBalance(rawAmount ?? null);
@@ -907,10 +905,10 @@ export async function buildSubAccountsFromPrivateRecords({
 
   if (allPrivateRecords.length === 0) {
     return {
+      privateTokenOpsByAccountId,
       subAccounts: baseSubAccounts.map(sa =>
         withPrivateBalance(sa, true, balanceEntriesById, privateTokenOpsByAccountId),
       ),
-      privateTokenOpsByAccountId,
     };
   }
 
@@ -921,7 +919,7 @@ export async function buildSubAccountsFromPrivateRecords({
   // Multiple records from the same tx for the same token have their amounts summed.
   const opAccumulator = new Map<string, Map<string, TxOpEntry>>();
 
-  const uniqueAllRecords = filterHistoryRecords(allPrivateRecords, address);
+  const uniqueAllRecords = filterHistoryRecords(allPrivateRecords);
 
   await promiseAllBatched(4, uniqueAllRecords, async record => {
     const tokenCurrency = calTokens.get(record.program_name);
@@ -968,19 +966,18 @@ export async function buildSubAccountsFromPrivateRecords({
       newSubAccounts.push(buildTokenAccount(id, ledgerAccountId, tokenCurrency));
     }
 
-    accumulateOp(
+    accumulateOp({
       opAccumulator,
-      id,
-      record.transaction_id.trim(),
+      tokenAccountId: id,
+      txId: record.transaction_id.trim(),
       amount,
       record,
-      {
+      tokenInfo: {
         programId: record.program_name,
-        tokenId: null,
       },
-      recipient,
-      fee,
-    );
+      ...(recipient && { recipient }),
+      ...(fee && { fee }),
+    });
   });
 
   // Build one operation per (token, transaction) from the accumulator.
