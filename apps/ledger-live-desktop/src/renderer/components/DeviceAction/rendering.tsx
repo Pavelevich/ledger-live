@@ -1091,11 +1091,40 @@ export const ConnectYourDevice = ({
   );
 };
 
-const OpenSwapBtn = () => {
+export const SWAP_NANO_S_INCOMPATIBILITY_PAGE = "Swap Nano S Incompatibility";
+
+export type SwapNanoSIncompatibilityVariant = "provider" | "currency";
+
+const getSwapNanoSIncompatibilityTrackingProperties = (
+  variant?: SwapNanoSIncompatibilityVariant,
+  provider?: string,
+) => ({
+  flow: "swap",
+  deviceModel: "nanoS",
+  ...(variant ? { variant } : {}),
+  ...(provider ? { provider } : {}),
+});
+
+const OpenSwapBtn = ({
+  variant,
+  provider,
+}: {
+  variant?: SwapNanoSIncompatibilityVariant;
+  provider?: string;
+}) => {
   const { setDrawer } = useContext(context);
   const dispatch = useDispatch();
 
   const onClick = () => {
+    console.log("[SwapNanoSIncompatibility] button_clicked: Swap with another provider", {
+      variant,
+      provider,
+    });
+    track("button_clicked", {
+      button: "Swap with another provider",
+      page: SWAP_NANO_S_INCOMPATIBILITY_PAGE,
+      ...getSwapNanoSIncompatibilityTrackingProperties(variant, provider),
+    });
     setTrackingSource("device action open swap button");
     dispatch(closePlatformAppDrawer());
     setDrawer(undefined);
@@ -1120,12 +1149,20 @@ export const HardwareUpdate = ({
   i18nKeyTitle,
   i18nKeyDescription,
   i18nKeyValues,
+  variant,
+  provider,
 }: {
   i18nKeyTitle: string;
   i18nKeyDescription: string;
   i18nKeyValues?: Record<string, string>;
+  variant?: SwapNanoSIncompatibilityVariant;
+  provider?: string;
 }) => (
   <Wrapper>
+    <TrackPage
+      category={SWAP_NANO_S_INCOMPATIBILITY_PAGE}
+      {...getSwapNanoSIncompatibilityTrackingProperties(variant, provider)}
+    />
     <Header>
       <Image resource={Nano} alt="NanoS" style={{ marginBottom: 40 }} />
     </Header>
@@ -1146,6 +1183,15 @@ export const HardwareUpdate = ({
           ml="40px"
           mr="40px"
           onClick={() => {
+            console.log("[SwapNanoSIncompatibility] button_clicked: Explore compatible devices", {
+              variant,
+              provider,
+            });
+            track("button_clicked", {
+              button: "Explore compatible devices",
+              page: SWAP_NANO_S_INCOMPATIBILITY_PAGE,
+              ...getSwapNanoSIncompatibilityTrackingProperties(variant, provider),
+            });
             openURL("https://shop.ledger.com/pages/hardware-wallet");
           }}
         >
@@ -1153,7 +1199,7 @@ export const HardwareUpdate = ({
         </ButtonV3>
       </ButtonContainer>
       <ButtonContainer width="100%">
-        <OpenSwapBtn />
+        <OpenSwapBtn variant={variant} provider={provider} />
       </ButtonContainer>
     </ButtonFooter>
   </Wrapper>

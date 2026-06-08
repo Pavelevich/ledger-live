@@ -181,13 +181,19 @@ export const LiveAppDrawer = () => {
                   i18nKeyTitle="swap.wrongDevice.title"
                   i18nKeyDescription="swap.wrongDevice.description"
                   i18nKeyValues={{ provider: getProviderName(data.provider) }}
+                  variant="provider"
+                  provider={data.provider}
                 />
               );
             }
             const keys = getIncompatibleCurrencyKeys(data.exchange);
             if (keys) {
               return (
-                <HardwareUpdate i18nKeyTitle={keys.title} i18nKeyDescription={keys.description} />
+                <HardwareUpdate
+                  i18nKeyTitle={keys.title}
+                  i18nKeyDescription={keys.description}
+                  variant="currency"
+                />
               );
             }
           }

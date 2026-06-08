@@ -99,12 +99,10 @@ export default class ModularDrawer {
 
   @Step("Select network in list if needed")
   async selectNetworkIfAsked(networkName: string): Promise<void> {
-    const isPresent = await IsIdPresent(this.modularDrawerFlowViewId);
-    if (!isPresent) return;
-    const modularDrawerAttributes = await getAttributesOfElement(this.modularDrawerFlowViewId, 0);
-    if (modularDrawerAttributes.label?.includes("Select network")) {
-      await this.selectNetwork(networkName);
-    }
+    try {
+      await waitForElementByText(networkName, 5000);
+      await tapByText(networkName);
+    } catch {}
   }
 
   @Step("Select network")
