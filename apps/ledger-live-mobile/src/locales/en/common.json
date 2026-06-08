@@ -9877,11 +9877,6 @@
         }
       }
     },
-    "noAssociatedAccounts": {
-      "title": "We can't create a new Aleo account",
-      "description": "New Aleo accounts must be created outside Ledger Wallet using an external service. Once your account exists, you can add it here.",
-      "link": "Learn how to create an Aleo account"
-    },
     "accountActions": {
       "selfTransfer": {
         "button": "Self Transfer"

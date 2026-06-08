@@ -190,7 +190,6 @@ export type BaseNavigatorStackParamList = {
     transaction?: Transaction;
     justScanned?: boolean;
   };
-  [ScreenName.AleoSelfTransfer]: undefined;
   [ScreenName.BleDevicePairingFlow]: undefined;
   [ScreenName.AnalyticsAllocation]: undefined;
   [ScreenName.AnalyticsOperations]: {
@@ -326,6 +325,9 @@ export type BaseNavigatorStackParamList = {
 
   // Concordium
   [NavigatorName.ConcordiumOnboard]: NavigatorScreenParams<ConcordiumOnboardAccountParamList>;
+
+  // Aleo
+  [ScreenName.AleoSelfTransfer]: undefined;
 
   [ScreenName.DeviceConnect]: {
     appName?: string;

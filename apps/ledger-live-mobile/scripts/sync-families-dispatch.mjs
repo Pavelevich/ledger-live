@@ -39,6 +39,7 @@ const targets = [
   "VerifyAddress",
   "NoAssociatedAccounts",
   "AddAccountFlow",
+  "SendStepRegistry",
   "EditOperationPanel",
   "MemoTagInput",
   "MemoTagSummary",

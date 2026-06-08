@@ -8,7 +8,6 @@ import { getAccountCurrency } from "@ledgerhq/live-common/account/index";
 import type { AleoAccount, Transaction } from "@ledgerhq/live-common/families/aleo/types";
 import { TRANSACTION_TYPE } from "@ledgerhq/live-common/families/aleo/constants";
 import { isPrivateTransaction } from "@ledgerhq/live-common/families/aleo/utils";
-import { initializePrivateProperties } from "../utils";
 
 type BalanceType = "public" | "private";
 
@@ -73,7 +72,10 @@ export function BalanceSelector({ account, transaction, onChange }: BalanceSelec
     const updatedTransaction: Transaction = {
       ...transaction,
       mode: TRANSACTION_TYPE.TRANSFER_PRIVATE,
-      properties: initializePrivateProperties(),
+      properties: {
+        amountRecordCommitments: [],
+        feeRecordCommitment: null,
+      },
     };
 
     onChange(updatedTransaction);

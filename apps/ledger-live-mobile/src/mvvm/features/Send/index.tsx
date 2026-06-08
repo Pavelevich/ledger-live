@@ -18,7 +18,7 @@ import { AmountScreen } from "./screens/Amount";
 import { ConfirmationScreen } from "./screens/Confirmation";
 import { SignatureScreen } from "./screens/Signature";
 import { CoinControlScreen } from "./screens/CoinControl";
-import { aleoSendStepRegistry } from "~/families/aleo/send";
+import perFamilySendStepRegistry from "~/generated/SendStepRegistry";
 
 const baseStepRegistry: StepRegistry<SendFlowStep> = {
   [SEND_FLOW_STEP.RECIPIENT]: RecipientScreen,
@@ -30,13 +30,8 @@ const baseStepRegistry: StepRegistry<SendFlowStep> = {
   [SEND_FLOW_STEP.CONFIRMATION]: ConfirmationScreen,
 };
 
-const perFamilyStepRegistry: Partial<Record<string, Partial<StepRegistry<SendFlowStep>>>> = {
-  aleo: aleoSendStepRegistry,
-};
-
-const hasFamilyStepRegistry = (family: string): family is keyof typeof perFamilyStepRegistry => {
-  return family in perFamilyStepRegistry;
-};
+const isSupportedFamily = (family: string): family is keyof typeof perFamilySendStepRegistry =>
+  Object.prototype.hasOwnProperty.call(perFamilySendStepRegistry, family);
 
 type SendWorkflowParams = Readonly<{
   account?: AccountLike;
@@ -103,13 +98,13 @@ export default function SendWorkflow() {
     const mainAccount = getMainAccount(account, initParams.parentAccount);
     const family = mainAccount.currency.family;
 
-    if (!family || !hasFamilyStepRegistry(family)) {
+    if (!family || !isSupportedFamily(family)) {
       return baseStepRegistry;
     }
 
     return {
       ...baseStepRegistry,
-      ...perFamilyStepRegistry[family],
+      ...perFamilySendStepRegistry[family],
     };
   }, [initParams.account, initParams.parentAccount]);
 

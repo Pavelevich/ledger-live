@@ -9,10 +9,10 @@ import type { AleoAccount, Transaction } from "@ledgerhq/live-common/families/al
 import { TRANSACTION_TYPE } from "@ledgerhq/live-common/families/aleo/constants";
 import { ScreenName } from "~/const";
 import type { BaseNavigatorStackParamList } from "~/components/RootNavigator/types/BaseNavigator";
-import { useSendFlowActions, useSendFlowData } from "~/mvvm/features/Send/context/SendFlowContext";
-import type { SendFlowNavigationProp } from "~/mvvm/features/Send/types";
-import { SendFlowLayout } from "~/mvvm/features/Send/components/SendFlowLayout";
-import { RecipientScreenView } from "~/mvvm/features/Send/screens/Recipient/components/RecipientScreenView";
+import { useSendFlowActions, useSendFlowData } from "LLM/features/Send/context/SendFlowContext";
+import type { SendFlowNavigationProp } from "LLM/features/Send/types";
+import { SendFlowLayout } from "LLM/features/Send/components/SendFlowLayout";
+import { RecipientScreenView } from "LLM/features/Send/screens/Recipient/components/RecipientScreenView";
 import { BalanceSelector } from "../components/BalanceSelector";
 
 /**
@@ -52,6 +52,13 @@ export function AleoRecipientScreen() {
     parentNavigation?.navigate(ScreenName.AleoSelfTransfer);
   }, [navigation]);
 
+  const handleBalanceChange = useCallback(
+    (updatedTransaction: Transaction) => {
+      transaction.setTransaction(updatedTransaction);
+    },
+    [transaction],
+  );
+
   if (!account || !currency) {
     return null;
   }
@@ -59,13 +66,6 @@ export function AleoRecipientScreen() {
   const isSelfTransferMode =
     txn?.mode === TRANSACTION_TYPE.CONVERT_PUBLIC_TO_PRIVATE ||
     txn?.mode === TRANSACTION_TYPE.CONVERT_PRIVATE_TO_PUBLIC;
-
-  const handleBalanceChange = useCallback(
-    (updatedTransaction: Transaction) => {
-      transaction.setTransaction(updatedTransaction);
-    },
-    [transaction],
-  );
 
   return (
     <>

@@ -16,7 +16,9 @@ type RouteParams = {
   parentId?: string;
 };
 
-type ConversionType = "publicToPrivate" | "privateToPublic";
+type SelfTransferMode =
+  | typeof TRANSACTION_TYPE.CONVERT_PUBLIC_TO_PRIVATE
+  | typeof TRANSACTION_TYPE.CONVERT_PRIVATE_TO_PUBLIC;
 
 /**
  * Self-transfer screen for Aleo accounts.
@@ -36,20 +38,17 @@ export function AleoSelfTransferScreen() {
     parentId ? accountSelector(state, { accountId: parentId }) : null,
   );
 
-  const [selectedConversion, setSelectedConversion] = useState<ConversionType>("publicToPrivate");
+  const [transactionMode, setTransactionMode] = useState<SelfTransferMode>(
+    TRANSACTION_TYPE.CONVERT_PUBLIC_TO_PRIVATE,
+  );
 
   const handleContinue = useCallback(() => {
     if (!account?.freshAddress) {
       return;
     }
 
-    const transactionMode =
-      selectedConversion === "publicToPrivate"
-        ? TRANSACTION_TYPE.CONVERT_PUBLIC_TO_PRIVATE
-        : TRANSACTION_TYPE.CONVERT_PRIVATE_TO_PUBLIC;
-
     const targetScreen =
-      selectedConversion === "privateToPublic"
+      transactionMode === TRANSACTION_TYPE.CONVERT_PRIVATE_TO_PUBLIC
         ? ScreenName.AleoRecordPicker
         : ScreenName.SendSelectRecipient;
 
@@ -67,7 +66,7 @@ export function AleoSelfTransferScreen() {
           recipient: account.freshAddress, // Self-transfer: recipient = own address
           fees: new BigNumber(0),
           mode: transactionMode,
-          ...(selectedConversion === "privateToPublic"
+          ...(transactionMode === TRANSACTION_TYPE.CONVERT_PRIVATE_TO_PUBLIC
             ? {
                 properties: {
                   amountRecordCommitments: [],
@@ -78,7 +77,7 @@ export function AleoSelfTransferScreen() {
         },
       },
     });
-  }, [account, parentAccount, selectedConversion, navigation]);
+  }, [account, parentAccount, transactionMode, navigation]);
 
   if (!account) {
     return (
@@ -102,11 +101,11 @@ export function AleoSelfTransferScreen() {
           {t("aleo.selfTransfer.modal.stepRecipient.selectLabel")}
         </Text>
 
-        <SelectableList currentValue={selectedConversion} onChange={setSelectedConversion}>
-          <SelectableList.Element value="publicToPrivate">
+        <SelectableList currentValue={transactionMode} onChange={setTransactionMode}>
+          <SelectableList.Element value={TRANSACTION_TYPE.CONVERT_PUBLIC_TO_PRIVATE}>
             {t("aleo.selfTransfer.modal.stepRecipient.publicToPrivate")}
           </SelectableList.Element>
-          <SelectableList.Element value="privateToPublic">
+          <SelectableList.Element value={TRANSACTION_TYPE.CONVERT_PRIVATE_TO_PUBLIC}>
             {t("aleo.selfTransfer.modal.stepRecipient.privateToPublic")}
           </SelectableList.Element>
         </SelectableList>

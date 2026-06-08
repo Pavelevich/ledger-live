@@ -3,9 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Box, Alert } from "@ledgerhq/native-ui";
 import type { Transaction } from "@ledgerhq/live-common/families/aleo/types";
 import { isPrivateTransaction } from "@ledgerhq/live-common/families/aleo/utils";
-import { SendFlowLayout } from "~/mvvm/features/Send/components/SendFlowLayout";
-import { AmountScreenInner } from "~/mvvm/features/Send/screens/Amount/components/AmountScreenInner";
-import { useAmountScreen } from "~/mvvm/features/Send/screens/Amount/hooks/useAmountScreen";
+import { SendFlowLayout } from "LLM/features/Send/components/SendFlowLayout";
+import { AmountScreenInner } from "LLM/features/Send/screens/Amount/components/AmountScreenInner";
+import { useAmountScreen } from "LLM/features/Send/screens/Amount/hooks/useAmountScreen";
 
 export function AleoAmountScreen() {
   const { t } = useTranslation();
