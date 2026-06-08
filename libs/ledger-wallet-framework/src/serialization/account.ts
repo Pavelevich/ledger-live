@@ -273,7 +273,7 @@ async function fromTokenAccountRaw(
     swapHistory,
   } = raw;
   const store = getCryptoAssetsStore();
-  const token = await store.findTokenById(tokenId).catch(() => undefined);
+  const token = await store.findTokenById(tokenId);
   invariant(token, `Token with id ${tokenId} not found`);
 
   const convertOperation = (op: OperationRaw) =>

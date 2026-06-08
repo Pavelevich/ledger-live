@@ -20,10 +20,10 @@ export function toAleoResourcesRaw(resources: AleoResources): AleoResourcesRaw {
     unspentPrivateRecords: resources.unspentPrivateRecords
       ? JSON.stringify(resources.unspentPrivateRecords)
       : null,
-    ...(resources.hasMigratedPublicTokens !== undefined && {
+    ...(typeof resources.hasMigratedPublicTokens === "boolean" && {
       hasMigratedPublicTokens: resources.hasMigratedPublicTokens,
     }),
-    ...(resources.hasMigratedPrivateTokens !== undefined && {
+    ...(typeof resources.hasMigratedPrivateTokens === "boolean" && {
       hasMigratedPrivateTokens: resources.hasMigratedPrivateTokens,
     }),
   };
@@ -40,10 +40,10 @@ export function fromAleoResourcesRaw(rawResources: AleoResourcesRaw): AleoResour
     unspentPrivateRecords: rawResources.unspentPrivateRecords
       ? JSON.parse(rawResources.unspentPrivateRecords)
       : null,
-    ...(rawResources.hasMigratedPublicTokens !== undefined && {
+    ...(typeof rawResources.hasMigratedPublicTokens === "boolean" && {
       hasMigratedPublicTokens: rawResources.hasMigratedPublicTokens,
     }),
-    ...(rawResources.hasMigratedPrivateTokens !== undefined && {
+    ...(typeof rawResources.hasMigratedPrivateTokens === "boolean" && {
       hasMigratedPrivateTokens: rawResources.hasMigratedPrivateTokens,
     }),
   };

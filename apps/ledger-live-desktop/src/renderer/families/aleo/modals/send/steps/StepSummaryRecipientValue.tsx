@@ -42,7 +42,7 @@ const StepSummaryRecipientValue = ({ account, parentAccount, transaction }: Prop
 
   // For self-transfers the sender IS the recipient — fall back to mainAccount when no address match
   const recipientAccount: Account | undefined = isSelfTransfer
-    ? matchingRecipientAccount ?? (mainAccount.type === "Account" ? mainAccount : undefined)
+    ? matchingRecipientAccount ?? mainAccount
     : matchingRecipientAccount;
 
   const recipientAccountName = useMaybeAccountName(recipientAccount);
@@ -52,7 +52,7 @@ const StepSummaryRecipientValue = ({ account, parentAccount, transaction }: Prop
   const displayName = isTokenAccount ? account.token.name : recipientAccountName;
 
   const shouldShowAccountName =
-    isSelfTransfer && Boolean(displayName) && (isTokenAccount || !!recipientAccount);
+    isSelfTransfer && !!displayName && (isTokenAccount || !!recipientAccount);
 
   if (shouldShowAccountName) {
     return (

@@ -201,10 +201,8 @@ export const prepareTransaction: AccountBridge<
   const isSelfTransfer = isSelfTransferTransaction(transaction);
   const subAccount = getAleoSubAccount(account, transaction.subAccountId);
   const isTokenTx = Boolean(subAccount);
-  const feeEstimation = estimateFees({
-    configOrCurrencyId: config,
-    transactionType: transaction.mode,
-  });
+  const transactionType = transaction.mode;
+  const feeEstimation = estimateFees({ configOrCurrencyId: config, transactionType });
   const estimatedFees = new BigNumber(feeEstimation.value.toString());
 
   if (isPrivateTransaction(transaction)) {

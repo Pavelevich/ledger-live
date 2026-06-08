@@ -258,10 +258,8 @@ async function handleTransferTransaction({
   allowSelfTransfer: boolean;
 }): Promise<AleoTransactionStatus> {
   const config = aleoCoinConfig.getCoinConfig(account.currency.id);
-  const feeEstimation = estimateFees({
-    configOrCurrencyId: config,
-    transactionType: transaction.mode,
-  });
+  const transactionType = transaction.mode;
+  const feeEstimation = estimateFees({ configOrCurrencyId: config, transactionType });
   const estimatedFees = new BigNumber(feeEstimation.value.toString());
   const calculatedAmount = calculateAmount({ transaction, account, estimatedFees });
   const availableBalance = getAvailableBalance(account, transaction);
