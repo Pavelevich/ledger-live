@@ -158,8 +158,6 @@ export enum ScreenName {
   SendFlowCustomFees = "SendFlowCustomFees",
   SendFlowCoinControl = "SendFlowCoinControl",
   SendFlowSignature = "SendFlowSignature",
-  AleoRecordPicker = "AleoRecordPicker",
-  AleoSelfTransfer = "AleoSelfTransfer",
   TransactionAlreadyValidatedError = "TransactionAlreadyValidatedError",
   SendValidationSuccess = "SendValidationSuccess",
   SettingsScreen = "SettingsScreen",
@@ -402,9 +400,12 @@ export enum ScreenName {
   // Concordium
   ConcordiumOnboardAccount = "ConcordiumOnboardAccount",
   // Aleo
-  AleoOnboardAccount = "AleoOnboardAccount",
+  AleoRecordPicker = "AleoRecordPicker",
+  AleoSelfTransfer = "AleoSelfTransfer",
+  AleoAddAccount = "AleoAddAccount",
   AleoViewKeyWarning = "AleoViewKeyWarning",
   AleoViewKeyApprove = "AleoViewKeyApprove",
+  AleoViewKeyRejected = "AleoViewKeyRejected",
 
   OnboardingWelcome = "OnboardingWelcome",
   OnboardingPostWelcomeSelection = "OnboardingPostWelcomeSelection",

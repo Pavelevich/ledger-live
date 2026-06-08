@@ -16,7 +16,7 @@ import AddAccountsSuccess from "./screens/AddAccountSuccess";
 import AddAccountsWarning from "./screens/AddAccountWarning";
 import NoAssociatedAccountsView from "./screens/NoAssociatedAccountsView";
 import CantonOnboardNavigator from "~/families/canton/Onboard/Onboard";
-import AleoAddAccountNavigator from "~/families/aleo/AddAccountFlow/AleoAddAccountNavigator";
+import AddAccountNavigator from "~/families/aleo/AddAccountFlow/AddAccountNavigator";
 import CloseWithConfirmation from "LLM/components/CloseWithConfirmation";
 import {
   BaseComposite,
@@ -123,8 +123,8 @@ export default function Navigator() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name={ScreenName.AleoOnboardAccount}
-        component={AleoAddAccountNavigator}
+        name={ScreenName.AleoAddAccount}
+        component={AddAccountNavigator}
         options={{ headerShown: false }}
       />
       <Stack.Screen

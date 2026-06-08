@@ -20,7 +20,6 @@ import {
 } from "./types";
 import { chunkCurrencyIds } from "../utils/chunkCurrencyIds";
 import { deepMergeCryptoAssets } from "../utils/deepMergeCryptoAssets";
-import { injectAleoMockData } from "./aleo.mock";
 
 const ALLOWED_DADA_HOSTS = new Set(["dada.api.ledger.com", "dada.api.ledger-test.com"]);
 

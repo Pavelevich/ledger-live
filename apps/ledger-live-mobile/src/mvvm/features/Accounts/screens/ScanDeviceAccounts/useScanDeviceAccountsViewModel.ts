@@ -13,6 +13,7 @@ import logger from "~/logger";
 import { NavigatorName, ScreenName } from "~/const";
 import { prepareCurrency } from "~/bridge/cache";
 import noAssociatedAccountsByFamily from "~/generated/NoAssociatedAccounts";
+import { getAddAccountFlowHandlers } from "../AddAccount/getAddAccountFlowHandlers";
 import { StackNavigatorNavigation } from "~/components/RootNavigator/types/helpers";
 import { BaseNavigatorStackParamList } from "~/components/RootNavigator/types/BaseNavigator";
 import { groupAddAccounts, addAccountsAction } from "@ledgerhq/live-wallet/addAccounts";
@@ -231,13 +232,24 @@ export default function useScanDeviceAccountsViewModel({
       }
     }
 
-    if (isCryptoCurrency(currency) && currency.family === "aleo") {
-      navigation.replace(ScreenName.AleoOnboardAccount, {
-        accountsToAdd,
+    const addAccountFlowHandlers = getAddAccountFlowHandlers(currency);
+
+    if (addAccountFlowHandlers?.onImportAccounts) {
+      addAccountFlowHandlers.onImportAccounts({
+        navigation,
         currency,
         device: route.params.device,
+        accountsToAdd,
+        routeParams: {
+          currency,
+          context: route.params.context,
+          onCloseNavigation: route.params.onCloseNavigation,
+          navigationDepth: route.params.navigationDepth,
+          inline: route.params.inline,
+          returnToSwap: route.params.returnToSwap,
+          onSuccess: route.params.onSuccess,
+        },
       });
-
       return;
     }
 

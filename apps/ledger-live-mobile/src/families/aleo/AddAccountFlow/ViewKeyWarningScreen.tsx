@@ -11,7 +11,7 @@ import type { AleoViewKeyFlowParamList } from "./types";
 
 type Props = StackNavigatorProps<AleoViewKeyFlowParamList, ScreenName.AleoViewKeyWarning>;
 
-export default function AleoViewKeyWarningScreen({ route, navigation }: Props) {
+export default function ViewKeyWarningScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const { t } = useTranslation();
 
@@ -24,11 +24,31 @@ export default function AleoViewKeyWarningScreen({ route, navigation }: Props) {
   ];
 
   const onContinue = useCallback(() => {
-    navigation.navigate(ScreenName.AleoViewKeyApprove, route.params);
+    const {
+      currency,
+      device,
+      context,
+      onCloseNavigation,
+      navigationDepth,
+      inline,
+      returnToSwap,
+      onSuccess,
+    } = route.params;
+
+    navigation.getParent()?.navigate(ScreenName.ScanDeviceAccounts, {
+      currency,
+      device,
+      context,
+      onCloseNavigation,
+      navigationDepth,
+      inline,
+      returnToSwap,
+      onSuccess,
+    });
   }, [navigation, route.params]);
 
   const onCancel = useCallback(() => {
-    navigation.goBack();
+    navigation.getParent()?.goBack();
   }, [navigation]);
 
   return (

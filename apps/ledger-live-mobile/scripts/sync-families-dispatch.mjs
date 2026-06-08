@@ -38,6 +38,7 @@ const targets = [
   "ConnectDevice",
   "VerifyAddress",
   "NoAssociatedAccounts",
+  "AddAccountFlow",
   "EditOperationPanel",
   "MemoTagInput",
   "MemoTagSummary",

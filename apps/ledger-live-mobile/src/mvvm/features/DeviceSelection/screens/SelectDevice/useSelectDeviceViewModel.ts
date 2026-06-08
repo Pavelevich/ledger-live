@@ -4,6 +4,7 @@ import type { Device } from "@ledgerhq/live-common/hw/actions/types";
 import { useIsFocused } from "@react-navigation/native";
 import { prepareCurrency } from "~/bridge/cache";
 import { NavigatorName, ScreenName } from "~/const";
+import { getAddAccountFlowHandlers } from "LLM/features/Accounts/screens/AddAccount/getAddAccountFlowHandlers";
 import { useAppDeviceAction } from "~/hooks/deviceActions";
 import { AppResult } from "@ledgerhq/live-common/hw/actions/app";
 import { DeviceSelectionNavigationProps, DeviceSelectionNavigatorParamsList } from "../../types";
@@ -58,6 +59,26 @@ export default function useSelectDeviceViewModel(
       // Always use navigate instead of replace to keep SelectDevice in the stack.
       // This allows retry navigation when device errors occur (e.g., device locked).
       // Previously, inline flows used replace which prevented retry navigation.
+      const addAccountFlowHandlers = getAddAccountFlowHandlers(currency);
+
+      if (addAccountFlowHandlers?.onDeviceConnected && meta.device) {
+        addAccountFlowHandlers.onDeviceConnected({
+          navigation,
+          currency,
+          device: meta.device,
+          connectResult: meta,
+          routeParams: {
+            currency,
+            context,
+            onCloseNavigation: route.params?.onCloseNavigation,
+            navigationDepth: route.params?.navigationDepth,
+            inline: route.params?.inline,
+            onSuccess: route.params?.onSuccess,
+          },
+        });
+        return;
+      }
+
       navigation.navigate(NavigatorName.AddAccounts, {
         screen: ScreenName.ScanDeviceAccounts,
         params,

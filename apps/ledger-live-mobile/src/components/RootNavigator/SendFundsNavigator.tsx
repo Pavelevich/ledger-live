@@ -77,13 +77,7 @@ export default function SendFundsNavigator() {
           component={AleoRecordPicker}
           options={{
             headerTitle: () => (
-              <StepHeader
-                title={t("aleo.send.recordPicker.title")}
-                subtitle={t("send.stepperHeader.stepRange", {
-                  currentStep: "3",
-                  totalSteps,
-                })}
-              />
+              <StepHeader title={t("aleo.send.recordPicker.title")} subtitle={null} />
             ),
           }}
         />

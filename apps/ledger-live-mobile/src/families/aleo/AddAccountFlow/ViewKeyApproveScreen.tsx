@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
 import { Alert, Icons, InfiniteLoader } from "@ledgerhq/native-ui";
 import type { Account } from "@ledgerhq/types-live";
@@ -43,12 +43,13 @@ function AccountStatusLabel({
   );
 }
 
-export default function AleoViewKeyApproveScreen({ route, navigation }: Props) {
+export default function ViewKeyApproveScreen({ route, navigation }: Props) {
   const { colors, theme } = useTheme();
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const existingAccounts = useSelector(accountsSelector);
   const isLdmkConnectAppEnabled = useFeature("ldmkConnectApp")?.enabled ?? false;
+  const abortedRef = useRef(false);
 
   const { accountsToAdd, currency, device } = route.params;
 
@@ -94,23 +95,31 @@ export default function AleoViewKeyApproveScreen({ route, navigation }: Props) {
   }, [hookState.shareProgress.viewKeys]);
 
   const onResult = useCallback(() => {
+    if (abortedRef.current) return;
+
     const viewKeysByAccountId = payload ?? undefined;
 
-    const patchedAccounts = accountsToAdd.map(account => {
+    const accountsWithViewKeys = accountsToAdd.reduce<Account[]>((acc, account) => {
       const viewKey = viewKeysByAccountId?.[account.id];
-      if (!viewKey) return account;
+      if (!viewKey) return acc;
       try {
-        return patchAccountWithViewKey(account, viewKey);
+        acc.push(patchAccountWithViewKey(account, viewKey));
       } catch {
-        return account;
+        // skip accounts that fail to patch
       }
-    });
+      return acc;
+    }, []);
+
+    if (accountsWithViewKeys.length === 0) {
+      navigation.navigate(ScreenName.AleoViewKeyRejected, route.params);
+      return;
+    }
 
     dispatch(
       addAccountsAction({
         existingAccounts,
-        scannedAccounts: patchedAccounts,
-        selectedIds: patchedAccounts.map(a => a.id),
+        scannedAccounts: accountsWithViewKeys,
+        selectedIds: accountsWithViewKeys.map(a => a.id),
         renamings: {},
       }),
     );
@@ -119,10 +128,21 @@ export default function AleoViewKeyApproveScreen({ route, navigation }: Props) {
       screen: ScreenName.AddAccountsSuccess,
       params: {
         currency,
-        accountsToAdd: patchedAccounts,
+        accountsToAdd: accountsWithViewKeys,
+        context: route.params.context,
+        onCloseNavigation: route.params.onCloseNavigation,
       },
     });
-  }, [payload, accountsToAdd, existingAccounts, dispatch, navigation, currency]);
+  }, [
+    payload,
+    accountsToAdd,
+    existingAccounts,
+    dispatch,
+    navigation,
+    currency,
+    route.params.context,
+    route.params.onCloseNavigation,
+  ]);
 
   const getAccountStatusIcon = useCallback(
     (index: number, accountId: string) => {
@@ -149,7 +169,7 @@ export default function AleoViewKeyApproveScreen({ route, navigation }: Props) {
   );
 
   const onCancel = useCallback(() => {
-    // Pop out of the Aleo sub-navigator entirely, back to ScanDeviceAccounts
+    abortedRef.current = true;
     navigation.getParent()?.goBack();
   }, [navigation]);
 

@@ -5,7 +5,7 @@ import { Account } from "@ledgerhq/types-live";
 import { Props as TouchableProps } from "~/components/Touchable";
 import { AddAccountContexts } from "./enums";
 import { CantonOnboardAccountParamList } from "~/families/canton/Onboard/types";
-import { AleoOnboardAccountParamList } from "~/families/aleo/AddAccountFlow/types";
+import { AleoAddAccountParamList } from "~/families/aleo/AddAccountFlow/types";
 
 export type AddAccountContextType = `${AddAccountContexts}`;
 
@@ -41,5 +41,5 @@ export type NetworkBasedAddAccountNavigator = {
     }) => React.JSX.Element;
   };
   [ScreenName.CantonOnboardAccount]: CantonOnboardAccountParamList[ScreenName.CantonOnboardAccount];
-  [ScreenName.AleoOnboardAccount]: AleoOnboardAccountParamList[ScreenName.AleoOnboardAccount];
+  [ScreenName.AleoAddAccount]: AleoAddAccountParamList[ScreenName.AleoAddAccount];
 };
