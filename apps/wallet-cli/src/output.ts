@@ -26,6 +26,12 @@ import { formatSwapStatusHuman, type SwapStatusLine } from "./commands/swap/stat
 import type { Balance, Operation, DiscoveredAccount, SendEvent, TokenInfo } from "./wallet/models";
 import type { SessionEntry } from "./session/session-store";
 import type { SwapPayloadResponse } from "@ledgerhq/live-common/exchange/swap/types";
+import type {
+  EarnDepositResult,
+  EarnPositionRow,
+  EarnWithdrawResult,
+  EarnYieldRow,
+} from "./wallet/earn/types";
 
 // ---------------------------------------------------------------------------
 // Context & interface
@@ -140,6 +146,17 @@ export interface CommandOutput {
     amountExpectedTo?: string;
     magnitudeAwareRate?: string;
   }): void;
+
+  // ---- Earn ----
+
+  /** Print earn yield opportunities (human: one line per row; json: envelope with `yields`). */
+  earnYields(rows: EarnYieldRow[]): void;
+  /** Print earn positions (human: one block per position; json: envelope with `positions`). */
+  earnPositions(rows: EarnPositionRow[]): void;
+  /** Print the result of an earn deposit (human: summary lines; json: envelope). */
+  earnDepositResult(result: EarnDepositResult): void;
+  /** Print the result of an earn withdraw (human: summary lines; json: envelope). */
+  earnWithdrawResult(result: EarnWithdrawResult): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -446,7 +463,81 @@ class HumanCommandOutput implements CommandOutput {
       writeStdout(`${colors.bold("Operation hash:")} ${args.operationHash}\n`);
     }
   }
+
+  earnYields(rows: EarnYieldRow[]): void {
+    if (rows.length === 0) {
+      writeStdout(colors.dim("No yield opportunities found."));
+      return;
+    }
+    for (const row of rows) {
+      const rate =
+        row.apy !== undefined
+          ? `${row.apy.toFixed(2)}% APY`
+          : `${(Number(row.interestValue) * 100).toFixed(2)}% ${row.interestType}`;
+      const parts = [
+        colors.bold(row.provider),
+        colors.dim(row.network),
+        row.depositToken,
+        colors.green(rate),
+      ];
+      if (row.category) parts.push(colors.dim(`(${row.category})`));
+      writeStdout(parts.join("  "));
+    }
+  }
+
+  earnPositions(rows: EarnPositionRow[]): void {
+    if (rows.length === 0) {
+      writeStdout(colors.dim("No positions found for this account."));
+      return;
+    }
+    for (const row of rows) {
+      const stale = row.isStale ? colors.dim(" (stale)") : "";
+      writeStdout(`${colors.bold(row.network)}  ${colors.dim(row.address)}${stale}`);
+      writeStdout(JSON.stringify(row.data, null, 2));
+    }
+  }
+
+  private _printEarnTransactions(transactions: EarnTransactionLike[]): void {
+    for (const tx of transactions) {
+      const bits = [colors.bold(tx.kind)];
+      if (tx.amount) bits.push(tx.amount);
+      if (tx.to) bits.push(colors.dim(`to ${tx.to}`));
+      if (tx.status) bits.push(colors.dim(`[${tx.status}]`));
+      writeStdout(`  ${bits.join("  ")}`);
+      if (tx.hash) writeStdout(`  hash: ${tx.hash}`);
+    }
+  }
+
+  earnDepositResult(result: EarnDepositResult): void {
+    writeStdout(`${colors.bold("Deposit:")} ${result.amount}`);
+    writeStdout(`${colors.bold("Network:")} ${result.network}`);
+    if (result.product) writeStdout(`${colors.bold("Product:")} ${result.product}`);
+    if (result.validator) writeStdout(`${colors.bold("Validator:")} ${result.validator}`);
+    writeStdout(`${colors.bold("Status:")} ${result.dryRun ? "dry-run" : result.status}`);
+    this._printEarnTransactions(result.transactions);
+  }
+
+  earnWithdrawResult(result: EarnWithdrawResult): void {
+    if (result.amount) writeStdout(`${colors.bold("Withdraw:")} ${result.amount}`);
+    writeStdout(`${colors.bold("Network:")} ${result.network}`);
+    if (result.product) writeStdout(`${colors.bold("Product:")} ${result.product}`);
+    if (result.stakeAccount) {
+      writeStdout(`${colors.bold("Stake account:")} ${result.stakeAccount}`);
+    }
+    if (result.finalize) writeStdout(`${colors.bold("Finalize:")} true`);
+    writeStdout(`${colors.bold("Status:")} ${result.dryRun ? "dry-run" : result.status}`);
+    this._printEarnTransactions(result.transactions);
+  }
 }
+
+// Local structural alias so the human transaction printer stays decoupled from import order.
+type EarnTransactionLike = {
+  kind: string;
+  hash?: string;
+  to?: string;
+  amount?: string;
+  status?: string;
+};
 
 // ---------------------------------------------------------------------------
 // JsonCommandOutput
@@ -695,6 +786,22 @@ class JsonCommandOutput implements CommandOutput {
         magnitudeAwareRate: args.magnitudeAwareRate,
       }),
     );
+  }
+
+  earnYields(rows: EarnYieldRow[]): void {
+    this._writeNdjson(this._envelope({ yields: rows }));
+  }
+
+  earnPositions(rows: EarnPositionRow[]): void {
+    this._writeNdjson(this._envelope({ positions: rows }));
+  }
+
+  earnDepositResult(result: EarnDepositResult): void {
+    this._writeNdjson(this._envelope({ ...result }));
+  }
+
+  earnWithdrawResult(result: EarnWithdrawResult): void {
+    this._writeNdjson(this._envelope({ ...result }));
   }
 }
 

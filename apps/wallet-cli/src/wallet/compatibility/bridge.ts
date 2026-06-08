@@ -10,6 +10,7 @@ import { makeBridgeCacheSystem } from "@ledgerhq/live-common/bridge/cache";
 import { accountDataToAccount } from "@ledgerhq/live-wallet/liveqr/cross";
 import type { Account, SignedOperation, TokenAccount } from "@ledgerhq/types-live";
 import type { DeviceModelId } from "@ledgerhq/types-devices";
+import type { TransactionModel as SolanaTransactionModel } from "@ledgerhq/coin-solana/types";
 import { BigNumber } from "bignumber.js";
 import { BigNumberStrSchema, DateTimeIsoSchema } from "@shared/schema-primitives";
 import type { AccountDescriptor, Balance, Operation, SendEvent } from "../models";
@@ -17,6 +18,42 @@ import type { TransactionIntent } from "../intents";
 import { parseAmountWithTicker } from "../intents/parse-amount";
 
 type SendOptions = { deviceId: string; deviceModelId: DeviceModelId };
+
+type SolanaTransactionIntent = Extract<TransactionIntent, { family: "solana" }>;
+
+// Maps a Solana CLI intent to the coin-solana transaction `model` (kind + uiState).
+// coin-solana routes createTransaction/prepareTransaction on `model.kind`, so the stake
+// behaviour MUST be expressed through this model — loose patch fields are ignored by the
+// generic shallow-merge updateTransaction. Mirrors coin-solana's cli-transaction inferTransactions.
+export function buildSolanaTransactionModel(
+  intent: SolanaTransactionIntent,
+): SolanaTransactionModel {
+  switch (intent.mode) {
+    case "stake.createAccount":
+      return {
+        kind: "stake.createAccount",
+        uiState: { delegate: { voteAccAddress: intent.validator ?? "" } },
+      };
+    case "stake.delegate":
+      return {
+        kind: "stake.delegate",
+        uiState: { stakeAccAddr: intent.stakeAccount ?? "", voteAccAddr: intent.validator ?? "" },
+      };
+    case "stake.undelegate":
+      return {
+        kind: "stake.undelegate",
+        uiState: { stakeAccAddr: intent.stakeAccount ?? "" },
+      };
+    case "stake.withdraw":
+      return {
+        kind: "stake.withdraw",
+        uiState: { stakeAccAddr: intent.stakeAccount ?? "" },
+      };
+    case "send":
+    default:
+      return { kind: "transfer", uiState: { memo: intent.memo } };
+  }
+}
 
 export class BridgeAdapter {
   private static readonly SYNC_CONFIG: { paginationConfig: object; blacklistedTokenIds: string[] } =
@@ -193,10 +230,9 @@ export class BridgeAdapter {
         }
         break;
       case "solana":
-        if (intent.mode) patch.mode = intent.mode;
-        if (intent.validator) patch.validator = intent.validator;
-        if (intent.stakeAccount) patch.stakeAccountId = intent.stakeAccount;
-        if (intent.memo) patch.memo = intent.memo;
+        // coin-solana behaviour is driven entirely by `model.kind`; setting loose
+        // mode/validator/stakeAccount fields is a no-op (generic merge ignores them).
+        patch.model = buildSolanaTransactionModel(intent);
         break;
     }
     return patch;
