@@ -6,7 +6,7 @@ import type {
   StakingPositionRaw,
   TezosAccount,
   TezosAccountRaw,
-} from "./types/bridge";
+} from "./types";
 
 function safeISOString(d: Date, uid: string): string | undefined {
   if (Number.isFinite(d.getTime())) return d.toISOString();
