@@ -20,6 +20,7 @@ import {
   isPrivateTransaction,
   sumPrivateRecords,
 } from "@ledgerhq/live-common/families/aleo/utils";
+import type { AleoTokenAccount } from "@ledgerhq/live-common/families/aleo/types";
 
 type SigningStrategy = "fast" | "balanced" | "full";
 
@@ -53,7 +54,7 @@ const STRATEGY_ICONS: Record<SigningStrategy, React.ReactElement> = {
 };
 
 type Props = {
-  account: AleoAccount;
+  account: AleoAccount | AleoTokenAccount;
   transaction: Transaction;
   updateTransaction: (updater: (t: Transaction) => Transaction) => void;
   onSelect?: () => void;
@@ -112,12 +113,17 @@ const QuickAmountSelector = ({ account, transaction, updateTransaction, onSelect
   const { t } = useTranslation();
   const accountUnit = useAccountUnit(account);
 
-  const sortedRecords: AleoUnspentRecord[] = useMemo(
+  const unspentPrivateRecords =
+    account.type === "TokenAccount"
+      ? account.unspentPrivateRecords
+      : account.aleoResources?.unspentPrivateRecords;
+
+  const sortedRecords = useMemo(
     () =>
-      [...(account.aleoResources?.unspentPrivateRecords ?? [])]
+      [...(unspentPrivateRecords ?? [])]
         .filter(r => new BigNumber(r.microcredits).isGreaterThan(0))
         .sort((a, b) => new BigNumber(b.microcredits).comparedTo(a.microcredits)),
-    [account.aleoResources?.unspentPrivateRecords],
+    [unspentPrivateRecords],
   );
 
   const spendableRecords = useMemo(

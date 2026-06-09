@@ -32,6 +32,7 @@ export const AleoSendStepRecipient = ({
     return null;
   }
 
+  const isTokenAccount = account.type === "TokenAccount";
   const mainAccount = getMainAccount(account, parentAccount);
 
   return (
@@ -49,6 +50,9 @@ export const AleoSendStepRecipient = ({
           <Label>{t("send.steps.details.selectAccountDebit")}</Label>
           <SelectAccount
             id="account-debit-placeholder"
+            withSubAccounts
+            enforceHideEmptySubAccounts
+            subAccountFilter={a => !a.balance.isZero()}
             autoFocus={!openedFromAccount}
             onChange={onChangeAccount}
             value={account}
@@ -61,21 +65,27 @@ export const AleoSendStepRecipient = ({
           <BalanceSelector
             transaction={transaction}
             mainAccount={mainAccount}
+            subAccount={isTokenAccount ? account : undefined}
             onChange={value => {
               updateTransaction(t => {
                 if (t.family !== "aleo") return t;
+                const isTokenTx = !!t.subAccountId;
 
                 if (value === "public") {
                   const { properties: _ignoredProperties, ...txWithoutProperties } = t;
                   return {
                     ...txWithoutProperties,
-                    mode: TRANSACTION_TYPE.TRANSFER_PUBLIC,
+                    mode: isTokenTx
+                      ? TRANSACTION_TYPE.TRANSFER_TOKEN_PUBLIC
+                      : TRANSACTION_TYPE.TRANSFER_PUBLIC,
                   };
                 }
 
                 return {
                   ...t,
-                  mode: TRANSACTION_TYPE.TRANSFER_PRIVATE,
+                  mode: isTokenTx
+                    ? TRANSACTION_TYPE.TRANSFER_TOKEN_PRIVATE
+                    : TRANSACTION_TYPE.TRANSFER_PRIVATE,
                   properties: {
                     amountRecordCommitments: [],
                     feeRecordCommitment: null,
