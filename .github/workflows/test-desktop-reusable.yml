@@ -164,10 +164,6 @@ jobs:
             --output-dir="apps/ledger-live-desktop/tests/mocks/local"
           mise run mitmproxy:start --mock-responses-file="apps/ledger-live-desktop/tests/mocks/local/firebase_feature_flags.json"
 
-      - name: Pre-download Electron binary
-        run: node -e "require('electron')"
-        working-directory: apps/ledger-live-desktop
-
       - name: Run playwright tests [Linux => xvfb-run]
         id: tests
         run: |
