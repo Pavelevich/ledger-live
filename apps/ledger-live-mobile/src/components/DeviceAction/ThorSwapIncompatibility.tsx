@@ -61,11 +61,11 @@ export function ThorSwapIncompatibility({ t, device, provider, theme, onClose }:
 
   const onExploreCompatibleDevices = () => {
     console.log(
-      "[SwapNanoSIncompatibility] button_clicked: Explore compatible devices",
+      "[SwapNanoSIncompatibility] button_clicked: explore_compatible_devices",
       trackingProperties,
     );
     track("button_clicked", {
-      button: "Explore compatible devices",
+      button: "explore_compatible_devices",
       page: SWAP_NANO_S_INCOMPATIBILITY_PAGE,
       ...trackingProperties,
     });
@@ -74,11 +74,11 @@ export function ThorSwapIncompatibility({ t, device, provider, theme, onClose }:
 
   const onSwapWithAnotherProvider = () => {
     console.log(
-      "[SwapNanoSIncompatibility] button_clicked: Swap with another provider",
+      "[SwapNanoSIncompatibility] button_clicked: swap_with_another_provider",
       trackingProperties,
     );
     track("button_clicked", {
-      button: "Swap with another provider",
+      button: "swap_with_another_provider",
       page: SWAP_NANO_S_INCOMPATIBILITY_PAGE,
       ...trackingProperties,
     });

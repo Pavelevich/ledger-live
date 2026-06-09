@@ -70,7 +70,7 @@ describe("ThorSwapIncompatibility - analytics", () => {
     await user.press(screen.getByText(EXPLORE_KEY));
 
     expect(mockTrack).toHaveBeenCalledWith("button_clicked", {
-      button: "Explore compatible devices",
+      button: "explore_compatible_devices",
       page: SWAP_NANO_S_INCOMPATIBILITY_PAGE,
       ...expectedProperties,
     });
@@ -83,7 +83,7 @@ describe("ThorSwapIncompatibility - analytics", () => {
     await user.press(screen.getByText(SWAP_PROVIDER_KEY));
 
     expect(mockTrack).toHaveBeenCalledWith("button_clicked", {
-      button: "Swap with another provider",
+      button: "swap_with_another_provider",
       page: SWAP_NANO_S_INCOMPATIBILITY_PAGE,
       ...expectedProperties,
     });

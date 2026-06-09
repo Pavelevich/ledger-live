@@ -1116,12 +1116,12 @@ const OpenSwapBtn = ({
   const dispatch = useDispatch();
 
   const onClick = () => {
-    console.log("[SwapNanoSIncompatibility] button_clicked: Swap with another provider", {
+    console.log("[SwapNanoSIncompatibility] button_clicked: swap_with_another_provider", {
       variant,
       provider,
     });
     track("button_clicked", {
-      button: "Swap with another provider",
+      button: "swap_with_another_provider",
       page: SWAP_NANO_S_INCOMPATIBILITY_PAGE,
       ...getSwapNanoSIncompatibilityTrackingProperties(variant, provider),
     });
@@ -1183,12 +1183,12 @@ export const HardwareUpdate = ({
           ml="40px"
           mr="40px"
           onClick={() => {
-            console.log("[SwapNanoSIncompatibility] button_clicked: Explore compatible devices", {
+            console.log("[SwapNanoSIncompatibility] button_clicked: explore_compatible_devices", {
               variant,
               provider,
             });
             track("button_clicked", {
-              button: "Explore compatible devices",
+              button: "explore_compatible_devices",
               page: SWAP_NANO_S_INCOMPATIBILITY_PAGE,
               ...getSwapNanoSIncompatibilityTrackingProperties(variant, provider),
             });

@@ -58,7 +58,7 @@ describe("HardwareUpdate - Nano S swap incompatibility analytics", () => {
     fireEvent.click(screen.getByText(EXPLORE_LABEL));
 
     expect(track).toHaveBeenCalledWith("button_clicked", {
-      button: "Explore compatible devices",
+      button: "explore_compatible_devices",
       page: "Swap Nano S Incompatibility",
       flow: "swap",
       deviceModel: "nanoS",
@@ -81,7 +81,7 @@ describe("HardwareUpdate - Nano S swap incompatibility analytics", () => {
     fireEvent.click(screen.getByText(SWAP_PROVIDER_LABEL));
 
     expect(track).toHaveBeenCalledWith("button_clicked", {
-      button: "Swap with another provider",
+      button: "swap_with_another_provider",
       page: "Swap Nano S Incompatibility",
       flow: "swap",
       deviceModel: "nanoS",
