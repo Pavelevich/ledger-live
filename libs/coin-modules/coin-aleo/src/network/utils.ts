@@ -10,6 +10,7 @@ import {
   EXPLORER_TRANSFER_TYPES,
   PROGRAM_ID,
   RECIPIENT_ARG_INDEX,
+  TOKEN_RECORD_NAME,
 } from "../constants";
 import { sdkClient } from "../network/sdk";
 import type {
@@ -147,6 +148,12 @@ export async function fetchAllOwnedRecords({
   start,
   resultsPerPage = DEFAULT_RECORDS_PAGE_SIZE,
   signal,
+  programs = [PROGRAM_ID.CREDITS],
+  functions = [
+    EXPLORER_TRANSFER_TYPES.PRIVATE,
+    EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE,
+    EXPLORER_TRANSFER_TYPES.PRIVATE_TO_PUBLIC,
+  ],
 }: {
   currency: CryptoCurrency;
   uuid: string;
@@ -154,6 +161,8 @@ export async function fetchAllOwnedRecords({
   start?: number;
   resultsPerPage?: number;
   signal?: AbortSignal;
+  programs?: string[];
+  functions?: string[];
 }): Promise<AleoPrivateRecord[]> {
   const allRecords: AleoPrivateRecord[] = [];
   let page = 0;
@@ -168,12 +177,8 @@ export async function fetchAllOwnedRecords({
       ...(typeof start === "number" && { start }),
       resultsPerPage,
       page,
-      programs: [PROGRAM_ID.CREDITS],
-      functions: [
-        EXPLORER_TRANSFER_TYPES.PRIVATE,
-        EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE,
-        EXPLORER_TRANSFER_TYPES.PRIVATE_TO_PUBLIC,
-      ],
+      programs,
+      functions,
     });
 
     allRecords.push(...records);
@@ -290,26 +295,41 @@ function hasValueField(
   return Boolean(input && "value" in input);
 }
 
-function getTransferArguments(
-  recordTransition: AleoTransition,
-  transactionId: string,
-): {
+function getTransferArguments({
+  isTokenRecord,
+  recordTransition,
+  transactionId,
+}: {
+  isTokenRecord: boolean;
+  recordTransition: AleoTransition;
+  transactionId: string;
+}): {
   recipientArgument: AleoTransitionInputWithValue;
   amountArgument: AleoTransitionInputWithValue;
 } | null {
-  if (recordTransition.inputs.length <= AMOUNT_ARG_INDEX) {
-    log(
-      "aleo/sync",
-      `enrichPrivateRecord: transition has only ${recordTransition.inputs.length} inputs, expected at least ${AMOUNT_ARG_INDEX + 1} for tx ${transactionId}`,
-    );
-    return null;
-  }
-
   // Recipient and amount are contract function arguments, so their inputs must have a `value` field.
   // Other input (missing `value` field) would indicate unexpected API data.
   // In that case we skip processing rather than crash.
-  const recipientInput = recordTransition.inputs[RECIPIENT_ARG_INDEX] ?? null;
-  const amountInput = recordTransition.inputs[AMOUNT_ARG_INDEX] ?? null;
+  const recipientOutputIndex = isTokenRecord ? RECIPIENT_ARG_INDEX - 1 : RECIPIENT_ARG_INDEX;
+  const amountOutputIndex = isTokenRecord ? AMOUNT_ARG_INDEX - 1 : AMOUNT_ARG_INDEX;
+
+  if (recordTransition.inputs.length <= amountOutputIndex) {
+    log(
+      "aleo/sync",
+      `enrichPrivateRecord: transition has only ${recordTransition.inputs.length} inputs, expected at least ${amountOutputIndex + 1} for tx ${transactionId}`,
+    );
+
+    console.error("aleo/sync", `enrichPrivateRecord: invalid transition inputs`, {
+      isTokenRecord,
+      recordTransition,
+      transactionId,
+    });
+
+    return null;
+  }
+
+  const recipientInput = recordTransition.inputs[recipientOutputIndex] ?? null;
+  const amountInput = recordTransition.inputs[amountOutputIndex] ?? null;
 
   if (!hasValueField(recipientInput) || !hasValueField(amountInput)) {
     log("aleo/sync", `enrichPrivateRecord: invalid transition arguments for tx ${transactionId}`);
@@ -337,7 +357,13 @@ async function enrichOutgoingRecord({
   viewKey: string;
   address: string;
 }): Promise<EnrichedRecordData | null> {
-  const transferArguments = getTransferArguments(recordTransition, transactionId);
+  const isTokenRecord = rawRecord.record_name.toLowerCase() === TOKEN_RECORD_NAME.toLowerCase();
+  const transferArguments = getTransferArguments({
+    isTokenRecord,
+    recordTransition,
+    transactionId,
+  });
+
   if (!transferArguments) {
     return null;
   }
@@ -358,6 +384,9 @@ async function enrichOutgoingRecord({
     };
   }
 
+  const recipientOutputIndex = isTokenRecord ? RECIPIENT_ARG_INDEX - 1 : RECIPIENT_ARG_INDEX;
+  const amountOutputIndex = isTokenRecord ? AMOUNT_ARG_INDEX - 1 : AMOUNT_ARG_INDEX;
+
   const [recipientData, amountData] = await Promise.all([
     sdkClient.decryptCiphertext({
       currency,
@@ -366,7 +395,7 @@ async function enrichOutgoingRecord({
       viewKey,
       programId: rawRecord.program_name,
       functionName: rawRecord.function_name,
-      outputIndex: RECIPIENT_ARG_INDEX,
+      outputIndex: recipientOutputIndex,
     }),
     sdkClient.decryptCiphertext({
       currency,
@@ -375,7 +404,7 @@ async function enrichOutgoingRecord({
       viewKey,
       programId: rawRecord.program_name,
       functionName: rawRecord.function_name,
-      outputIndex: AMOUNT_ARG_INDEX,
+      outputIndex: amountOutputIndex,
     }),
   ]);
 
@@ -404,13 +433,14 @@ async function enrichIncomingRecord({
     ciphertext: rawRecord.record_ciphertext,
     viewKey,
   });
-  const microcredits = outputRecord.data?.microcredits;
+  const microcredits = outputRecord.data?.microcredits ?? outputRecord.data?.amount;
 
   if (!microcredits) {
     log(
       "aleo/sync",
       `enrichPrivateRecord: microcredits missing in decrypted record for tx ${transactionId}`,
     );
+
     return null;
   }
 
@@ -433,6 +463,15 @@ export async function enrichPrivateRecord({
   viewKey: string;
 }): Promise<EnrichedPrivateRecord | null> {
   const transactionId = rawRecord.transaction_id.trim();
+
+  // Fee records (fee_private / fee_public) are not transfer operations.
+  // Their transition lives in details.fee, not details.execution.transitions,
+  // so transition_index may resolve to the wrong execution transition (e.g. the
+  // token transfer), leading to wrong decryption or a crash. Skip them explicitly.
+  if (rawRecord.function_name === "fee_private" || rawRecord.function_name === "fee_public") {
+    return null;
+  }
+
   const details = await apiClient.getTransactionById(currency, transactionId);
 
   if (shouldSkipPublicToPrivateRecord(rawRecord, address)) {
@@ -591,12 +630,15 @@ export const patchPublicOperations = async ({
         operation.extra.functionId === EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE
       ) {
         const shouldMarkAsPatched = latestPrivateRecordBlockHeight >= txDetails.block_height;
+        const programId =
+          operation.extra.tokenInfo?.programId ?? recordTransition.program ?? PROGRAM_ID.CREDITS;
+
         const recipientData = await sdkClient.decryptCiphertext({
           currency,
           ciphertext: recipientArgument.value,
           tpk: recordTransition.tpk,
           viewKey,
-          programId: PROGRAM_ID.CREDITS,
+          programId,
           functionName: EXPLORER_TRANSFER_TYPES.PUBLIC_TO_PRIVATE,
           outputIndex: 0,
         });

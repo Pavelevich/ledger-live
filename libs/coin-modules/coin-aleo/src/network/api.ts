@@ -11,6 +11,8 @@ import type {
   AleoGetProvePublicKeyResponse,
   AleoPrivateRecord,
   DelegatedProvingResponse,
+  AleoVerifiedTokensResponse,
+  AleoVerifiedToken,
 } from "../types/api";
 import { getNetworkConfig } from "../logic/utils";
 import { PROGRAM_ID } from "../constants";
@@ -35,6 +37,30 @@ async function getAccountBalance(
   const res = await network<string | null>({
     method: "GET",
     url: `${nodeUrl}/v2/${networkType}/program/${PROGRAM_ID.CREDITS}/mapping/account/${address}`,
+  });
+
+  return res.data;
+}
+
+/**
+ * Fetches the public balance of an address-mapped token program
+ * (e.g. usdcx_stablecoin.aleo, usad_stablecoin.aleo) for a given address.
+ *
+ * @param currency - The Aleo currency
+ * @param programId - The token program id
+ * @param address - The owner's Aleo address
+ * @returns The balance in raw units (u128) or null if no balance exists
+ */
+async function getProgramTokenBalance(
+  currency: CryptoCurrency,
+  programId: string,
+  address: string,
+): Promise<string | null> {
+  const { nodeUrl, networkType } = getNetworkConfig(currency);
+
+  const res = await network<string | null>({
+    method: "GET",
+    url: `${nodeUrl}/v2/${networkType}/program/${programId}/mapping/balances/${address}`,
   });
 
   return res.data;
@@ -72,6 +98,7 @@ async function getAccountPublicTransactions({
   const { nodeUrl, networkType } = getNetworkConfig(currency);
   const params = new URLSearchParams({
     metadata: "true",
+    token_info: "true",
     limit: limit.toString(),
     sort: order,
     direction,
@@ -84,6 +111,40 @@ async function getAccountPublicTransactions({
   });
 
   return res.data;
+}
+
+async function getVerifiedTokens({
+  currency,
+  limit = 100,
+  offset = 0,
+}: {
+  currency: CryptoCurrency;
+  limit?: number;
+  offset?: number;
+}): Promise<AleoVerifiedToken[]> {
+  const { nodeUrl, networkType } = getNetworkConfig(currency);
+  const allTokens: AleoVerifiedToken[] = [];
+  let currentOffset = offset;
+  let hasNext = true;
+
+  while (hasNext) {
+    const params = new URLSearchParams({
+      verified: "true",
+      limit: limit.toString(),
+      offset: currentOffset.toString(),
+    });
+
+    const res = await network<AleoVerifiedTokensResponse>({
+      method: "GET",
+      url: `${nodeUrl}/v2/${networkType}/tokens?${params.toString()}`,
+    });
+
+    allTokens.push(...res.data.data);
+    hasNext = res.data.pagination.has_next;
+    currentOffset += limit;
+  }
+
+  return allTokens;
 }
 
 async function getScannerPublicKey(
@@ -261,8 +322,10 @@ async function submitEncryptedDelegatedProvingRequest({
 export const apiClient = {
   getLatestBlock,
   getAccountBalance,
+  getProgramTokenBalance,
   getTransactionById,
   getAccountPublicTransactions,
+  getVerifiedTokens,
   getRecordScannerStatus,
   getScannerPublicKey,
   getProvePublicKey,

@@ -10,6 +10,8 @@ import { log } from "@ledgerhq/logs";
 import { concat, merge, Observable, of } from "rxjs";
 import { concatMap } from "rxjs/operators";
 import { SyncConfig, SYNC_TYPE_SHIELDED, SYNC_TYPE_TRANSPARENT } from "@ledgerhq/types-live";
+import type { TokenCurrency } from "@ledgerhq/types-cryptoassets";
+import type { TokenAccount } from "@ledgerhq/types-live";
 import invariant from "invariant";
 import { AleoApiConfigurationResetError } from "../errors";
 import { getBalance, lastBlock, listOperations } from "../logic";
@@ -17,6 +19,7 @@ import {
   extractViewKey,
   isProvableApiConfigured,
   isRecordScannerReady,
+  resolveConfig,
   splitPrivateAndPublicOperations,
 } from "../logic/utils";
 import { aleoPrivateSyncProgress$ } from "./privateSyncProgress";
@@ -26,7 +29,16 @@ import {
   PROGRESS_AFTER_LIST_OPS,
   PROGRESS_AFTER_PARSING_RECORDS,
   PROGRESS_DONE,
+  TOKEN_RECORD_NAME,
 } from "../constants";
+import {
+  resolveTokenSubAccounts,
+  buildSubAccountsFromPrivateRecords,
+  getCalTokens,
+  patchTokenSubAccountOps,
+  attachPrivateTokenOpsToParent,
+} from "./tokens";
+import type { AleoPrivateRecord } from "../types/api";
 import type {
   AleoAccount,
   AleoOperation,
@@ -51,6 +63,7 @@ export async function performPublicSync(
 ): Promise<Partial<AleoAccount>> {
   const { initialAccount, address, derivationMode, currency } = info;
   const viewKey = initialAccount ? extractViewKey(initialAccount) : undefined;
+  const config = resolveConfig(currency.id);
 
   const ledgerAccountId = encodeAccountId({
     type: "js",
@@ -70,15 +83,24 @@ export async function performPublicSync(
   const nativeBalance = balances.find(b => b.asset.type === "native")?.value ?? BigInt(0);
   const transparentBalance = new BigNumber(nativeBalance.toString());
 
+  // Migration: if tokens were never synced (legacy account) or were previously disabled,
+  // reset the cursor to 0 so the full history is re-fetched and all operations get
+  // tokenInfo populated in a single pass — no extra network call needed.
+  const isTokenMigrationRequired =
+    config.enableTokens && initialAccount?.aleoResources?.hasMigratedPublicTokens !== true;
   const shouldSyncFromScratch = !initialAccount;
+
   const allOldOperations = shouldSyncFromScratch ? [] : (initialAccount?.operations ?? []);
 
   // Keep public and private ops separate so each cursor is derived from the correct op type.
   // Mixing them risks using a private op's blockHeight as the public sync cursor.
   const [oldPrivateOps, oldPublicOps] = splitPrivateAndPublicOperations(allOldOperations);
-  const lastBlockHeight = shouldSyncFromScratch ? 0 : (oldPublicOps[0]?.blockHeight ?? 0);
+
+  const lastBlockHeight =
+    shouldSyncFromScratch || isTokenMigrationRequired ? 0 : (oldPublicOps[0]?.blockHeight ?? 0);
 
   const latestAccountPublicOperations = await listOperations({
+    config,
     currency,
     address,
     ledgerAccountId,
@@ -92,21 +114,47 @@ export async function performPublicSync(
 
   // sort by date desc
   latestAccountPublicOperations.operations.sort((a, b) => b.date.getTime() - a.date.getTime());
+  latestAccountPublicOperations.tokenOperations.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  // Already-patched ops have modified senders/recipients that differ from raw API data.
+  // Filter them from the incoming ops — mergeOps then simply keeps the patched version
+  // from oldPublicOps untouched, and no patch-restoration pass is needed.
+  const patchedIds = new Set(
+    (oldPublicOps as AleoOperation[]).filter(op => op.extra?.patched).map(op => op.id),
+  );
+  const filteredLatestPublicOperations = latestAccountPublicOperations.operations.filter(
+    op => !patchedIds.has(op.id),
+  );
 
   const publicOperations = shouldSyncFromScratch
-    ? latestAccountPublicOperations.operations
-    : (mergeOps(oldPublicOps, latestAccountPublicOperations.operations) as AleoOperation[]);
+    ? (latestAccountPublicOperations.operations as AleoOperation[])
+    : (mergeOps(oldPublicOps, filteredLatestPublicOperations) as AleoOperation[]);
 
   // Preserve existing private operations so the public-only result is complete.
   // They will be replaced by performPrivateSync when the private sync runs.
   const preservedPrivateOps = shouldSyncFromScratch ? [] : (oldPrivateOps as AleoOperation[]);
 
-  const operations = [...publicOperations, ...preservedPrivateOps].sort(
-    (a, b) => b.date.getTime() - a.date.getTime(),
-  );
-
   const preservedPrivateBalance = initialAccount?.aleoResources?.privateBalance ?? null;
   const totalBalance = transparentBalance.plus(preservedPrivateBalance ?? 0);
+
+  // Sub-accounts are derived from token operations in publicOperations.
+  // No separate transaction fetch is needed.
+  const { updatedCoinOperations: updatedPublicOperations, subAccounts } =
+    await resolveTokenSubAccounts({
+      enableTokens: config.enableTokens,
+      currency,
+      address,
+      ledgerAccountId,
+      coinOperations: publicOperations,
+      tokenOperations: latestAccountPublicOperations.tokenOperations,
+      calTokens: latestAccountPublicOperations.calTokens,
+      shouldSyncFromScratch,
+      initialAccount,
+    });
+
+  const operations = [...updatedPublicOperations, ...preservedPrivateOps].sort(
+    (a, b) => b.date.getTime() - a.date.getTime(),
+  );
 
   return {
     type: "Account",
@@ -116,6 +164,7 @@ export async function performPublicSync(
     blockHeight,
     operations,
     operationsCount: operations.length,
+    subAccounts,
     lastSyncDate: new Date(),
     aleoResources: {
       transparentBalance,
@@ -123,6 +172,7 @@ export async function performPublicSync(
       privateBalance: preservedPrivateBalance,
       unspentPrivateRecords: initialAccount?.aleoResources?.unspentPrivateRecords ?? null,
       lastPrivateSyncDate: initialAccount?.aleoResources?.lastPrivateSyncDate ?? null,
+      ...(config.enableTokens && { hasMigratedPublicTokens: true }),
     },
   };
 }
@@ -169,11 +219,13 @@ export async function performPrivateSync(
   freshTransparentBalance?: BigNumber,
   onProgress?: (progress: number) => void,
   signal?: AbortSignal,
+  publicSubAccounts?: TokenAccount[],
 ): Promise<Partial<AleoAccount> | null> {
   const { initialAccount, address, derivationMode, currency } = info;
   invariant(initialAccount, "aleo: performPrivateSync requires initialAccount");
 
   const viewKey = extractViewKey(initialAccount);
+  const config = resolveConfig(currency.id);
 
   const provableApi = await accessProvableApi({
     currency,
@@ -232,7 +284,18 @@ export async function performPrivateSync(
   const [oldPrivateOps] = splitPrivateAndPublicOperations(allOldOperations);
   const lastPrivateBlockHeight = oldPrivateOps[0]?.blockHeight ?? 0;
 
-  const [rawNewPrivateRecords, rawUnspentPrivateRecords] = await Promise.all([
+  // Determine whether we should fetch private token records this cycle.
+  const hasMigratedPrivateTokens = initialAccount.aleoResources?.hasMigratedPrivateTokens ?? false;
+  const shouldFetchPrivateTokens = config.enableTokens;
+  const tokenSyncStartHeight =
+    shouldFetchPrivateTokens && hasMigratedPrivateTokens ? lastPrivateBlockHeight : 0;
+
+  const [
+    rawNewNativePrivateRecords,
+    rawUnspentNativePrivateRecords,
+    rawTokenPrivateRecords,
+    rawUnspentTokenRecords,
+  ] = await Promise.all([
     fetchAllOwnedRecords({
       currency,
       uuid: provableApi.uuid,
@@ -245,6 +308,26 @@ export async function performPrivateSync(
       unspent: true,
       ...(signal && { signal }),
     }),
+    shouldFetchPrivateTokens
+      ? fetchAllOwnedRecords({
+          currency,
+          uuid: provableApi.uuid,
+          start: tokenSyncStartHeight,
+          programs: [],
+          functions: [],
+          ...(signal && { signal }),
+        })
+      : Promise.resolve([]),
+    shouldFetchPrivateTokens
+      ? fetchAllOwnedRecords({
+          currency,
+          uuid: provableApi.uuid,
+          unspent: true,
+          programs: [],
+          functions: [],
+          ...(signal && { signal }),
+        })
+      : Promise.resolve([]),
   ]);
 
   signal?.throwIfAborted();
@@ -252,13 +335,40 @@ export async function performPrivateSync(
   // Emits PROGRESS_AFTER_SCANNER% progress when all records are fetched
   onProgress?.(PROGRESS_AFTER_SCANNER);
 
+  let calTokens: Map<string, TokenCurrency> = new Map();
+  let calTokenRecords: AleoPrivateRecord[] = [];
+  let unspentCalTokenRecords: AleoPrivateRecord[] = [];
+  let newCalTokenRecords: AleoPrivateRecord[] = [];
+  const isCalToken = (record: AleoPrivateRecord) => calTokens.has(record.program_name);
+
+  if (shouldFetchPrivateTokens) {
+    calTokens = await getCalTokens({
+      currencyId: currency.id,
+      programNames: [...rawTokenPrivateRecords, ...rawUnspentTokenRecords]
+        .filter(record => record.record_name.toLowerCase() === TOKEN_RECORD_NAME.toLowerCase())
+        .map(record => record.program_name),
+    });
+
+    calTokenRecords = rawTokenPrivateRecords.filter(isCalToken);
+    unspentCalTokenRecords = rawUnspentTokenRecords.filter(isCalToken);
+
+    // for now this is used only to calculate consumed record tags
+    // we assume that records spent before are already cleared from the scanner
+    newCalTokenRecords = calTokenRecords.filter(
+      record => record.block_height >= lastPrivateBlockHeight,
+    );
+  }
+
+  signal?.throwIfAborted();
+
   const [latestAccountPrivateOperations, patchedPublicOperations] = await Promise.all([
     listPrivateOperations({
       currency,
       viewKey,
       address,
       ledgerAccountId,
-      privateRecords: rawNewPrivateRecords,
+      privateRecords: rawNewNativePrivateRecords,
+      ...(calTokenRecords.length > 0 && { tokenRecords: newCalTokenRecords }),
       ...(onProgress
         ? {
             onProgress: (completed: number, total: number) =>
@@ -275,7 +385,7 @@ export async function performPrivateSync(
     patchPublicOperations({
       currency,
       publicOperations: currentPublicOps,
-      privateRecords: rawNewPrivateRecords,
+      privateRecords: rawNewNativePrivateRecords,
       address,
       ledgerAccountId,
       viewKey,
@@ -286,7 +396,13 @@ export async function performPrivateSync(
   // This is confirmed and expected behavior for now - scanner relies on two processes that can lag behind each other.
   // The workaround is to remove records whose tags appear as inputs in currently processed transactions.
   // Records spent before are expected to have been cleared from the scanner by then.
-  const filteredUnspentRecords = rawUnspentPrivateRecords.filter(
+  const filteredUnspentRecords = rawUnspentNativePrivateRecords.filter(
+    record => !latestAccountPrivateOperations.consumedRecordTags.has(record.tag),
+  );
+
+  // Unspent token records fetched separately (token programs are not returned by the
+  // unfiltered unspent fetch). Apply the same consumed-tag filter as native credits.
+  const filteredUnspentTokenRecords = unspentCalTokenRecords.filter(
     record => !latestAccountPrivateOperations.consumedRecordTags.has(record.tag),
   );
 
@@ -323,7 +439,7 @@ export async function performPrivateSync(
   // otherwise fall back to what the account last recorded.
   const transparentBalance =
     freshTransparentBalance ?? initialAccount.aleoResources?.transparentBalance ?? new BigNumber(0);
-  const totalBalance = transparentBalance.plus(privateBalance ?? 0);
+  const totalBalance = transparentBalance.plus(privateBalance);
 
   log("aleo/performPrivateSync", "Private sync completed", {
     ledgerAccountId,
@@ -331,6 +447,38 @@ export async function performPrivateSync(
     patchedPublicOpsCount: patchedPublicOperations.length,
     privateBalance: privateBalance.toString(),
   });
+
+  let mergedSubAccounts: TokenAccount[] = [];
+  if (config.enableTokens) {
+    const baseSubAccounts = publicSubAccounts ?? initialAccount.subAccounts ?? [];
+
+    const { subAccounts, privateTokenOpsByAccountId } = await buildSubAccountsFromPrivateRecords({
+      currency,
+      ledgerAccountId,
+      allPrivateRecords: calTokenRecords,
+      unspentPrivateRecords: filteredUnspentTokenRecords,
+      baseSubAccounts,
+      viewKey,
+      address,
+      calTokens,
+    });
+
+    mergedSubAccounts = patchTokenSubAccountOps({ subAccounts });
+
+    attachPrivateTokenOpsToParent({
+      operations,
+      privateTokenOpsByAccountId,
+      ledgerAccountId,
+      address,
+    });
+
+    operations.sort((a, b) => b.date.getTime() - a.date.getTime());
+  }
+
+  const finalSubAccounts = config.enableTokens ? mergedSubAccounts : [];
+  const finalOperations = config.enableTokens
+    ? operations
+    : operations.filter(op => (op.subOperations ?? []).length === 0);
 
   onProgress?.(PROGRESS_DONE);
 
@@ -340,15 +488,20 @@ export async function performPrivateSync(
     balance: totalBalance,
     spendableBalance: totalBalance,
     blockHeight,
-    operations,
-    operationsCount: operations.length,
+    operations: finalOperations,
+    operationsCount: finalOperations.length,
     lastSyncDate: initialAccount?.lastSyncDate,
+    subAccounts: finalSubAccounts,
     aleoResources: {
       transparentBalance,
       provableApi,
       privateBalance,
       unspentPrivateRecords,
       lastPrivateSyncDate: new Date(),
+      ...(config.enableTokens && {
+        hasMigratedPublicTokens: true,
+        hasMigratedPrivateTokens: true,
+      }),
     },
   };
 }
@@ -358,6 +511,7 @@ export function createPrivateSyncObservable(
   syncConfig: SyncConfig,
   publicOps: AleoOperation[],
   freshTransparentBalance?: BigNumber,
+  publicSubAccounts?: TokenAccount[],
 ): Observable<Partial<AleoAccount>> {
   const { initialAccount } = info;
   const currencyId = info.currency.id;
@@ -391,6 +545,7 @@ export function createPrivateSyncObservable(
       freshTransparentBalance,
       onProgress,
       controller.signal,
+      publicSubAccounts,
     )
       .then(result => {
         releaseLock();
@@ -486,6 +641,7 @@ export function buildSyncObservables(
               // would cause them to be re-processed and duplicated in the final result.
               splitPrivateAndPublicOperations(publicResult.operations ?? [])[1] as AleoOperation[],
               publicResult.aleoResources?.transparentBalance,
+              publicResult.subAccounts,
             ),
           ),
         ),

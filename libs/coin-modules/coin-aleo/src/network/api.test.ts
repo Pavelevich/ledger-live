@@ -162,7 +162,7 @@ describe("apiClient", () => {
       expect(network).toHaveBeenCalledTimes(1);
       expect(network).toHaveBeenCalledWith({
         method: "GET",
-        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&limit=50&sort=asc&direction=next`,
+        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&token_info=true&limit=50&sort=asc&direction=next`,
       });
       expect(result).toEqual(mockResponse);
       expect(result.transactions).toHaveLength(2);
@@ -183,10 +183,11 @@ describe("apiClient", () => {
       });
 
       expect(getNetworkConfig).toHaveBeenCalledTimes(1);
+      expect(getNetworkConfig).toHaveBeenCalledWith(mockCurrency);
       expect(network).toHaveBeenCalledTimes(1);
       expect(network).toHaveBeenCalledWith({
         method: "GET",
-        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&limit=10&sort=asc&direction=next`,
+        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&token_info=true&limit=10&sort=asc&direction=next`,
       });
     });
 
@@ -204,10 +205,11 @@ describe("apiClient", () => {
       });
 
       expect(getNetworkConfig).toHaveBeenCalledTimes(1);
+      expect(getNetworkConfig).toHaveBeenCalledWith(mockCurrency);
       expect(network).toHaveBeenCalledTimes(1);
       expect(network).toHaveBeenCalledWith({
         method: "GET",
-        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&limit=50&sort=desc&direction=next`,
+        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&token_info=true&limit=50&sort=desc&direction=next`,
       });
     });
 
@@ -234,10 +236,11 @@ describe("apiClient", () => {
       });
 
       expect(getNetworkConfig).toHaveBeenCalledTimes(1);
+      expect(getNetworkConfig).toHaveBeenCalledWith(mockCurrency);
       expect(network).toHaveBeenCalledTimes(1);
       expect(network).toHaveBeenCalledWith({
         method: "GET",
-        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&limit=50&sort=asc&direction=next&cursor_block_number=${cursor}`,
+        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&token_info=true&limit=50&sort=asc&direction=next&cursor_block_number=${cursor}`,
       });
     });
 
@@ -255,10 +258,11 @@ describe("apiClient", () => {
       });
 
       expect(getNetworkConfig).toHaveBeenCalledTimes(1);
+      expect(getNetworkConfig).toHaveBeenCalledWith(mockCurrency);
       expect(network).toHaveBeenCalledTimes(1);
       expect(network).toHaveBeenCalledWith({
         method: "GET",
-        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&limit=50&sort=asc&direction=prev`,
+        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&token_info=true&limit=50&sort=asc&direction=prev`,
       });
     });
 
@@ -295,10 +299,11 @@ describe("apiClient", () => {
       });
 
       expect(getNetworkConfig).toHaveBeenCalledTimes(1);
+      expect(getNetworkConfig).toHaveBeenCalledWith(mockCurrency);
       expect(network).toHaveBeenCalledTimes(1);
       expect(network).toHaveBeenCalledWith({
         method: "GET",
-        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&limit=20&sort=desc&direction=prev&cursor_block_number=${cursor}`,
+        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/transactions/address/${mockAddress}?metadata=true&token_info=true&limit=20&sort=desc&direction=prev&cursor_block_number=${cursor}`,
       });
       expect(result).toEqual(mockResponse);
     });
@@ -344,10 +349,11 @@ describe("apiClient", () => {
       });
 
       expect(getNetworkConfig).toHaveBeenCalledTimes(1);
+      expect(getNetworkConfig).toHaveBeenCalledWith(mockCurrency);
       expect(network).toHaveBeenCalledTimes(1);
       expect(network).toHaveBeenCalledWith({
         method: "GET",
-        url: `${testnetConfig.nodeUrl}/v2/${testnetConfig.networkType}/transactions/address/${mockAddress}?metadata=true&limit=50&sort=asc&direction=next`,
+        url: `${testnetConfig.nodeUrl}/v2/${testnetConfig.networkType}/transactions/address/${mockAddress}?metadata=true&token_info=true&limit=50&sort=asc&direction=next`,
       });
     });
   });
@@ -399,6 +405,28 @@ describe("apiClient", () => {
         method: "GET",
         url: `${testnetConfig.nodeUrl}/v2/${testnetConfig.networkType}/program/credits.aleo/mapping/account/${mockAddress}`,
       });
+    });
+  });
+
+  describe("getProgramTokenBalance", () => {
+    const mockAddress = "aleo1test123address456";
+    const mockProgramId = "usad_stablecoin.aleo";
+
+    it("should fetch stablecoin program balance by address", async () => {
+      jest.mocked(network).mockResolvedValue({ data: "27000000u128", status: 200 });
+
+      const result = await apiClient.getProgramTokenBalance(
+        mockCurrency,
+        mockProgramId,
+        mockAddress,
+      );
+
+      expect(network).toHaveBeenCalledTimes(1);
+      expect(network).toHaveBeenCalledWith({
+        method: "GET",
+        url: `${mockNetworkConfig.nodeUrl}/v2/${mockNetworkConfig.networkType}/program/${mockProgramId}/mapping/balances/${mockAddress}`,
+      });
+      expect(result).toBe("27000000u128");
     });
   });
 
