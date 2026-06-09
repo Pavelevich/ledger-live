@@ -32,9 +32,18 @@ const isDmkTransport = (
   );
 };
 
+// Speculos only trusts test-signed clear-signing data, so the CAL must be queried
+// in "test" mode when signing against it (otherwise the device rejects the
+// clear-signing context and demands blind signing). Detected via a duck-typed
+// marker to avoid importing the Speculos transport into production bundles.
+const isSpeculosTransport = (transport: Transport): boolean =>
+  "isSpeculos" in transport && (transport as { isSpeculos?: boolean }).isSpeculos === true;
+
 const createLiveSigner: CreateSigner<EvmSigner> = (transport: Transport) => {
   if (isDmkTransport(transport)) {
-    return new DmkSignerEth(transport.dmk, transport.sessionId);
+    return new DmkSignerEth(transport.dmk, transport.sessionId, {
+      calMode: isSpeculosTransport(transport) ? "test" : undefined,
+    });
   }
 
   return new LegacySignerEth(transport);

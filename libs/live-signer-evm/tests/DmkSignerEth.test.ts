@@ -3,6 +3,7 @@ import { EIP712Message } from "@ledgerhq/types-live";
 import { lastValueFrom, of } from "rxjs";
 import { DmkSignerEth } from "../src/DmkSignerEth";
 import { SignTransactionDAStep } from "@ledgerhq/device-signer-kit-ethereum";
+import { ContextModuleBuilder } from "@ledgerhq/context-module";
 
 describe("DmkSignerEth", () => {
   const dmkMock = {
@@ -21,6 +22,32 @@ describe("DmkSignerEth", () => {
     jest.clearAllMocks();
 
     signer = new DmkSignerEth(dmkMock as unknown as DeviceManagementKit, "sessionId");
+  });
+
+  describe("CAL mode", () => {
+    it("should not override the CAL config in default (prod) mode", () => {
+      // GIVEN
+      const setCalConfigSpy = jest.spyOn(ContextModuleBuilder.prototype, "setCalConfig");
+
+      // WHEN
+      new DmkSignerEth(dmkMock as unknown as DeviceManagementKit, "sessionId");
+
+      // THEN
+      expect(setCalConfigSpy).not.toHaveBeenCalled();
+      setCalConfigSpy.mockRestore();
+    });
+
+    it("should force the CAL into test mode when calMode is test (Speculos)", () => {
+      // GIVEN
+      const setCalConfigSpy = jest.spyOn(ContextModuleBuilder.prototype, "setCalConfig");
+
+      // WHEN
+      new DmkSignerEth(dmkMock as unknown as DeviceManagementKit, "sessionId", { calMode: "test" });
+
+      // THEN
+      expect(setCalConfigSpy).toHaveBeenCalledWith(expect.objectContaining({ mode: "test" }));
+      setCalConfigSpy.mockRestore();
+    });
   });
 
   describe("getAddress", () => {
@@ -338,16 +365,18 @@ describe("DmkSignerEth", () => {
       });
 
       // WHEN
-      const result = await lastValueFrom(signer.signTransaction(path, rawTxHex, {
-        domains: [
-          {
-            registry: "ens",
-            domain,
-            address: "0x",
-            type: "forward",
-          },
-        ]
-      }));
+      const result = await lastValueFrom(
+        signer.signTransaction(path, rawTxHex, {
+          domains: [
+            {
+              registry: "ens",
+              domain,
+              address: "0x",
+              type: "forward",
+            },
+          ],
+        }),
+      );
 
       // THEN
       expect(dmkMock.executeDeviceAction).toHaveBeenCalledWith(

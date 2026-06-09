@@ -59,6 +59,12 @@ export default class SpeculosHttpTransport extends Transport {
   readonly dmk: DeviceManagementKit;
   sessionId: string;
 
+  // Marker allowing consumers to detect a Speculos device without importing this
+  // class (and pulling Speculos code into production bundles). Used to force the
+  // clear-signing CAL into "test" mode, since Speculos only trusts test-signed
+  // descriptors/certificates.
+  readonly isSpeculos = true;
+
   // Emits events from the Speculos automation SSE stream.
   // Lazy: the SSE stream is opened on first subscription and torn down when
   // the last subscriber leaves. Smoke e2e tests never subscribe, so they pay

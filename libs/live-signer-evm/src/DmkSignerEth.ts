@@ -16,7 +16,12 @@ import {
   DeviceManagementKit,
   hexaStringToBuffer,
 } from "@ledgerhq/device-management-kit";
-import { ContextModuleBuilder, ContextModuleChainID } from "@ledgerhq/context-module";
+import {
+  ContextModuleBuilder,
+  ContextModuleChainID,
+  DEFAULT_CONFIG,
+  type ContextModuleCalMode,
+} from "@ledgerhq/context-module";
 import { EIP712Message } from "@ledgerhq/types-live";
 import {
   EthAppPleaseEnableContractData,
@@ -36,22 +41,45 @@ export type DAError =
   | SignTransactionDAError
   | SignPersonalMessageDAError;
 
+export type DmkSignerEthOptions = {
+  /**
+   * CAL signature mode used to fetch clear-signing descriptors and PKI
+   * certificates. Defaults to "prod".
+   *
+   * Must be set to "test" when signing against a Speculos device: its PKI root
+   * only trusts test-signed clear-signing data. With the default "prod" mode the
+   * device rejects the clear-signing context and falls back to blind signing,
+   * surfacing as a 6a80 / EthAppPleaseEnableContractData error.
+   */
+  calMode?: ContextModuleCalMode;
+};
+
 export class DmkSignerEth implements EvmSigner {
   private readonly signer: SignerEth;
   constructor(
     readonly dmk: DeviceManagementKit,
     readonly sessionId: string,
+    options: DmkSignerEthOptions = {},
   ) {
     const originToken = "1e55ba3959f4543af24809d9066a2120bd2ac9246e626e26a1ff77eb109ca0e5"; // gitleaks:allow
     liveBlindSigningReporter.setInner(
-      buildDefaultHttpBlindSigningReporter(originToken, ContextModuleChainID.Ethereum, "ledger-wallet"),
+      buildDefaultHttpBlindSigningReporter(
+        originToken,
+        ContextModuleChainID.Ethereum,
+        "ledger-wallet",
+      ),
     );
     liveBlindSigningReporter.setContext({ sessionId });
-    const contextModule = new ContextModuleBuilder({ originToken })
+    const contextModuleBuilder = new ContextModuleBuilder({ originToken })
       .setAppSource("ledger-wallet")
       .setBlindSigningReporter(liveBlindSigningReporter)
-      .setChain(ContextModuleChainID.Ethereum)
-      .build();
+      .setChain(ContextModuleChainID.Ethereum);
+
+    if (options.calMode && options.calMode !== DEFAULT_CONFIG.cal.mode) {
+      contextModuleBuilder.setCalConfig({ ...DEFAULT_CONFIG.cal, mode: options.calMode });
+    }
+
+    const contextModule = contextModuleBuilder.build();
     this.signer = new SignerEthBuilder({
       dmk,
       sessionId,
