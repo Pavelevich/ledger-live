@@ -15,6 +15,7 @@ import { waitForSpeculosReady } from "@ledgerhq/live-common/e2e/speculosCI";
 import type { PartialFeatures } from "@shared/feature-flags";
 import { sanitizeError } from "@ledgerhq/live-common/e2e/index";
 import { parseExtraFeatureFlags } from "@ledgerhq/live-common/e2e/featureFlagsJsonUtils";
+import { setForceLiveFixtures } from "@ledgerhq/live-common/e2e/fixtureCache";
 
 function checkTestFailed(): void {
   if (globalThis.IS_FAILED) {
@@ -37,6 +38,13 @@ export type InitOptions = {
   userdata?: string;
   testedCurrencies?: string[];
   featureFlags?: PartialFeatures;
+  /**
+   * Opt out of the nightly pre-generated userdata fixtures for this test and
+   * force a live CLI scan / address derivation (today's behavior). Use for the
+   * rare specs that assert on exact balances / operation history that can drift
+   * within the fixture's freshness window. See QAA-1285.
+   */
+  freshFixtures?: boolean;
 };
 
 type Entry = {
@@ -275,6 +283,32 @@ async function executeCliCommands(
 export class InitializationManager {
   static async initialize(
     options: InitOptions,
+    userdataPath: string,
+    userdataSpeculos: string,
+  ): Promise<void> {
+    const {
+      speculosApp,
+      cliCommands = [],
+      cliCommandsOnApp = [],
+      featureFlags,
+      freshFixtures,
+    } = options;
+
+    // When opted out, force live CLI generation for this test's setup.
+    setForceLiveFixtures(!!freshFixtures);
+    try {
+      await InitializationManager.runSetup(
+        { speculosApp, cliCommands, cliCommandsOnApp, featureFlags },
+        userdataPath,
+        userdataSpeculos,
+      );
+    } finally {
+      setForceLiveFixtures(false);
+    }
+  }
+
+  private static async runSetup(
+    options: Pick<InitOptions, "speculosApp" | "cliCommands" | "cliCommandsOnApp" | "featureFlags">,
     userdataPath: string,
     userdataSpeculos: string,
   ): Promise<void> {

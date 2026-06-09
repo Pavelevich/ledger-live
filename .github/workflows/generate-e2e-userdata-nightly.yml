@@ -1,0 +1,199 @@
+name: "[E2E] - Nightly userdata fixtures"
+run-name: >
+  @E2E userdata fixtures • ${{ inputs.speculos_device || 'nanoSP' }} • triggered by ${{ github.actor }}
+
+# Pre-generate the per-test userdata account bundles + receive addresses once per
+# night (QAA-1285). The heavy CLI `liveData` network scan therefore runs O(1) per
+# day instead of O(runs x scenarios). The day's desktop + mobile E2E runs restore
+# the bundle from S3 and fall back to live generation when it is missing/stale.
+on:
+  schedule:
+    # 00:00 UTC daily (incl. weekends so Monday is fresh). Leaves a buffer before
+    # the LWM (03:00) and LWD (04:00) scheduled E2E runs.
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch/sha to checkout (defaults to the workflow branch)"
+        required: false
+      speculos_device:
+        description: "Device used to generate the (device-independent) fixtures"
+        required: false
+        type: choice
+        options:
+          - nanoSP
+          - nanoX
+          - stax
+          - flex
+          - nanoGen5
+        default: nanoSP
+      only_apps:
+        description: "Restrict generation to these Speculos app names (space separated, debug only)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  generate:
+    name: "Generate userdata fixtures (${{ inputs.speculos_device || 'nanoSP' }})"
+    runs-on: [ledger-live-linux-e2e-speculos-32CPU-128RAM]
+    timeout-minutes: 60
+    env:
+      FORCE_COLOR: 3
+      DO_NOT_TRACK: 1
+      NODE_OPTIONS: "--max-old-space-size=14336"
+      SPECULOS_DEVICE: ${{ inputs.speculos_device || 'nanoSP' }}
+      SPECULOS_IMAGE_TAG: ghcr.io/ledgerhq/speculos:latest
+      COINAPPS: ${{ github.workspace }}/coin-apps
+      FIXTURES_DIR: e2e/_fixtures
+    steps:
+      - name: Generate GitHub App token
+        id: generate-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # 2.2.1
+        with:
+          app-id: ${{ secrets.GH_BOT_APP_ID }}
+          private-key: ${{ secrets.GH_BOT_PRIVATE_KEY }}
+          repositories: |
+            ledger-live
+            coin-apps
+
+      - name: Checkout ledger-live monorepo (shallow clone)
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          repository: LedgerHQ/ledger-live
+          token: ${{ steps.generate-token.outputs.token }}
+          fetch-depth: 1
+
+      - name: Checkout coin-apps (device firmware binaries)
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: LedgerHQ/coin-apps
+          ref: master
+          token: ${{ steps.generate-token.outputs.token }}
+          path: coin-apps
+          fetch-depth: 1
+
+      - name: Setup caches
+        id: caches
+        uses: LedgerHQ/ledger-live/tools/actions/composites/setup-caches@develop
+        with:
+          use-mise: true
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-develop-role-arn: ${{ secrets.AWS_CACHE_OIDC_ROLE_ARN_DEVELOP }}
+          cache-branch-role-arn: ${{ secrets.AWS_CACHE_OIDC_ROLE_ARN_BRANCH }}
+          nx-key: ${{ secrets.NX_KEY }}
+          accountId: ${{ secrets.AWS_ACCOUNT_ID_PROD }}
+          roleName: ${{ secrets.AWS_CACHE_ROLE_NAME }}
+          region: ${{ secrets.AWS_CACHE_REGION }}
+
+      - name: Pull Speculos docker image
+        run: docker pull ${{ env.SPECULOS_IMAGE_TAG }}
+        shell: bash
+
+      - name: Install CLI dependencies
+        env:
+          LANG: en_US.UTF-8
+        run: pnpm i --filter="@ledgerhq/live-cli..." --filter="ledger-live" --no-frozen-lockfile --unsafe-perm --ignore-scripts
+        shell: bash
+
+      - name: Build CLI
+        uses: LedgerHQ/ledger-live/tools/actions/composites/nx-step@develop
+        with:
+          command: pnpm exec nx run @ledgerhq/live-cli:build
+          disable_cache: false
+
+      - name: Configure test environment (API endpoints, broadcast off)
+        uses: LedgerHQ/ledger-live/tools/actions/composites/setup-e2e-env@develop
+        with:
+          enable_broadcast: false
+          build_type: testing
+
+      - name: Verify Speculos Docker image is ready
+        run: |
+          while ! docker image inspect ${{ env.SPECULOS_IMAGE_TAG }} > /dev/null 2>&1; do
+            echo "Waiting for Speculos image pull to complete..."
+            sleep 2
+          done
+          echo "Speculos image ready: ${{ env.SPECULOS_IMAGE_TAG }}"
+        shell: bash
+
+      - name: Compute cache key and coin-apps commit
+        id: meta
+        shell: bash
+        run: |
+          KEY="$(node scripts/e2e-userdata-cache-key.mjs)"
+          echo "key=$KEY" >> "$GITHUB_OUTPUT"
+          echo "Cache key: $KEY"
+          COMMIT="$(git -C coin-apps rev-parse HEAD)"
+          echo "coin_apps_commit=$COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Generate userdata fixtures
+        env:
+          SEED: ${{ secrets.SEED_QAA_B2C }}
+          COIN_APPS_COMMIT: ${{ steps.meta.outputs.coin_apps_commit }}
+          E2E_NANO_APP_VERSION_PATH: ${{ github.workspace }}/${{ env.FIXTURES_DIR }}/nano-app-catalog.json
+        run: |
+          ONLY=""
+          if [ -n "${{ inputs.only_apps }}" ]; then
+            for app in ${{ inputs.only_apps }}; do
+              ONLY="$ONLY --only $app"
+            done
+          fi
+          pnpm e2e:generate-userdata --out "${{ env.FIXTURES_DIR }}" $ONLY
+        shell: bash
+
+      - name: Summarize generated fixtures
+        shell: bash
+        run: |
+          {
+            echo "## Nightly E2E userdata fixtures"
+            echo ""
+            echo "- **Cache key:** ${{ steps.meta.outputs.key }}"
+            echo "- **Device:** ${{ env.SPECULOS_DEVICE }}"
+            echo "- **coin-apps commit:** ${{ steps.meta.outputs.coin_apps_commit }}"
+            echo ""
+            echo '```'
+            ls -la "${{ env.FIXTURES_DIR }}" || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish fixtures to S3 cache
+        uses: LedgerHQ/ledger-live/tools/actions/composites/cache/upload@develop
+        with:
+          key: ${{ steps.meta.outputs.key }}
+          path: ${{ env.FIXTURES_DIR }}
+          accessKey: ${{ env.AWS_ACCESS_KEY_ID }}
+          secretKey: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          sessionToken: ${{ env.AWS_SESSION_TOKEN }}
+          bucket: ll-nx-cache
+          region: ${{ secrets.AWS_CACHE_REGION }}
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: "C05FKJ7DFAP"
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "#FF333C",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": ":warning: *Nightly E2E userdata fixtures failed* on `${{ inputs.ref || github.ref_name }}` (${{ env.SPECULOS_DEVICE }}).\nThe day's E2E runs will fall back to live generation.\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Workflow run>"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_LIVE_CI_BOT_TOKEN }}

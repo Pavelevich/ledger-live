@@ -22,6 +22,7 @@ import { Team } from "@ledgerhq/live-common/e2e/enum/Team";
 import { lastValueFrom, Observable } from "rxjs";
 import { launchSpeculos, cleanSpeculos } from "tests/utils/speculosUtils";
 import { getSpeculosAddress, SpeculosDevice } from "@ledgerhq/live-common/e2e/speculos";
+import { setForceLiveFixtures } from "@ledgerhq/live-common/e2e/fixtureCache";
 import { attachNetworkLogging } from "../utils/networkLogging";
 import type { LiveAppManifest } from "@ledgerhq/live-common/platform/types";
 import { unregisterAllTransportModules } from "@ledgerhq/live-common/hw/index";
@@ -59,6 +60,13 @@ type TestFixtures = {
   localManifestOverride?: LiveAppManifest[];
   teamOwner?: Team;
   speculos: SpeculosFixtureHandle;
+  /**
+   * Opt out of the nightly pre-generated userdata fixtures for this test and
+   * force a live CLI scan / address derivation (today's behavior). Use for the
+   * rare specs that assert on exact balances / operation history that can drift
+   * within the fixture's freshness window. See QAA-1285.
+   */
+  freshFixtures?: boolean;
 };
 
 const IS_DEBUG_MODE = !!process.env.PWDEBUG;
@@ -111,6 +119,7 @@ export const test = base.extend<TestFixtures>({
   extraUserdataFiles: undefined,
   localManifestOverride: undefined,
   teamOwner: undefined,
+  freshFixtures: false,
 
   app: async ({ page, electronApp }, use) => {
     const app = new Application(page, electronApp);
@@ -154,7 +163,7 @@ export const test = base.extend<TestFixtures>({
   },
 
   speculos: async (
-    { speculosApp, cliCommands, userdataDestinationPath, cliCommandsOnApp },
+    { speculosApp, cliCommands, userdataDestinationPath, cliCommandsOnApp, freshFixtures },
     use,
     testInfo,
   ) => {
@@ -180,6 +189,9 @@ export const test = base.extend<TestFixtures>({
       setEnv("MOCK", "");
       process.env.MOCK = "";
 
+      // When opted out, force live CLI generation for this test's setup.
+      setForceLiveFixtures(!!freshFixtures);
+
       unregisterAllTransportModules();
 
       if (cliCommandsOnApp?.length) {
@@ -202,6 +214,7 @@ export const test = base.extend<TestFixtures>({
 
       await use(handle);
     } finally {
+      setForceLiveFixtures(false);
       if (currentDevice) {
         await cleanSpeculos(currentDevice);
       }

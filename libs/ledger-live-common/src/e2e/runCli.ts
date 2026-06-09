@@ -137,7 +137,12 @@ export function runCliCommand(command: string): Promise<string> {
 
   return new Promise((resolve, reject) => {
     const args = command.split("+");
-    const child = spawn("node", [LEDGER_LIVE_CLI_BIN, ...args], {
+    // Resolved at call time so a parent CLI process (e.g. the `e2eFixtures`
+    // nightly generator) can point spawned children at its own bin via
+    // LEDGER_LIVE_CLI_BIN, independent of how live-common was bundled. When
+    // unset (the default for e2e test runs) this is the build-relative path.
+    const bin = process.env.LEDGER_LIVE_CLI_BIN || LEDGER_LIVE_CLI_BIN;
+    const child = spawn("node", [bin, ...args], {
       stdio: "pipe",
       env: process.env,
     });

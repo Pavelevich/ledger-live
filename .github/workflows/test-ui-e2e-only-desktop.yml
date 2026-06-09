@@ -250,6 +250,15 @@ jobs:
           enable_broadcast: ${{ inputs.enable_broadcast }}
           build_type: ${{ inputs.build_type }}
 
+      - name: Restore nightly E2E userdata fixtures (QAA-1285)
+        uses: LedgerHQ/ledger-live/tools/actions/composites/restore-e2e-userdata@develop
+        with:
+          accessKey: ${{ env.AWS_ACCESS_KEY_ID }}
+          secretKey: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          sessionToken: ${{ env.AWS_SESSION_TOKEN }}
+          bucket: ll-nx-cache
+          region: ${{ secrets.AWS_CACHE_REGION }}
+
       - name: Build Playwright grep filter from inputs
         id: test-filter
         run: |

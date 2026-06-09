@@ -605,6 +605,16 @@ jobs:
           enable_broadcast: ${{ inputs.enable_broadcast }}
           build_type: ${{ inputs.production_firebase == true && 'js' || 'testing' }}
 
+      - name: Restore nightly E2E userdata fixtures (QAA-1285)
+        uses: LedgerHQ/ledger-live/tools/actions/composites/restore-e2e-userdata@develop
+        with:
+          accessKey: ${{ env.AWS_ACCESS_KEY_ID }}
+          secretKey: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          sessionToken: ${{ env.AWS_SESSION_TOKEN }}
+          bucket: ${{ env.cache-bucket }}
+          region: ${{ secrets.AWS_CACHE_REGION }}
+          endpoint: ${{ secrets.S3_DIRECTCONNECT_ENDPOINT }}
+
       - name: Get iOS device info
         run: |
           set -o pipefail
@@ -821,6 +831,15 @@ jobs:
         with:
           enable_broadcast: ${{ inputs.enable_broadcast }}
           build_type: ${{ inputs.production_firebase == true && 'js' || 'testing' }}
+
+      - name: Restore nightly E2E userdata fixtures (QAA-1285)
+        uses: LedgerHQ/ledger-live/tools/actions/composites/restore-e2e-userdata@develop
+        with:
+          accessKey: ${{ env.AWS_ACCESS_KEY_ID }}
+          secretKey: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          sessionToken: ${{ env.AWS_SESSION_TOKEN }}
+          bucket: ${{ env.cache-bucket }}
+          region: ${{ secrets.AWS_CACHE_REGION }}
 
       - name: Get Android device info
         run: |

@@ -15,6 +15,8 @@ import {
 import { getCcdAccountAddress } from "./families/concordium";
 import { approveToken } from "./families/evm";
 import { getCryptoCurrencyById, parseCurrencyUnit } from "../currencies/index";
+import { effectiveScheme } from "./userdataFixtureManifest";
+import { tryGetCachedAddress, tryMergeAccountsFromFixture } from "./fixtureCache";
 
 export type LiveDataCommandOptions = {
   readonly useScheme?: boolean;
@@ -33,6 +35,14 @@ export const getAccountAddress = async (account: Account | TokenAccount): Promis
     return address;
   }
 
+  // Deterministic derivation: reuse the nightly-cached address when available,
+  // otherwise derive live via Speculos (today's behavior).
+  const cachedAddress = tryGetCachedAddress(account);
+  if (cachedAddress) {
+    account.address = cachedAddress;
+    return cachedAddress;
+  }
+
   const { address } = await runCliGetAddress({
     currency: account.currency.speculosApp.name,
     path: account.accountPath,
@@ -46,10 +56,20 @@ export const getAccountAddress = async (account: Account | TokenAccount): Promis
 export const liveDataCommand =
   (account: Account | TokenAccount, options?: LiveDataCommandOptions) =>
   async (userdataPath?: string) => {
+    const scheme = effectiveScheme(account, options?.useScheme);
+
+    // Cache-first: merge the nightly-pre-generated account bundle (no network
+    // scan). Skipped when a per-test `currency` override is set (the fixture is
+    // keyed by the account's own currency) or when the fixture is missing /
+    // stale / opted-out, in which case we fall back to the live scan below.
+    if (!options?.currency && tryMergeAccountsFromFixture(userdataPath, account, scheme)) {
+      return;
+    }
+
     await runCliLiveData({
       currency: options?.currency ?? account.currency.speculosApp.name,
       index: account.index,
-      ...(options?.useScheme && account.derivationMode ? { scheme: account.derivationMode } : {}),
+      ...(scheme ? { scheme } : {}),
       add: true,
       appjson: userdataPath,
     });
@@ -193,12 +213,7 @@ export const liveDataWithAddressCommand =
 export const liveDataWithParentAddressCommand =
   (liveDataAccount: Account | TokenAccount, accountToAssign: TokenAccount) =>
   async (userdataPath?: string) => {
-    await runCliLiveData({
-      currency: liveDataAccount.currency.speculosApp.name,
-      index: liveDataAccount.index,
-      add: true,
-      appjson: userdataPath,
-    });
+    await liveDataCommand(liveDataAccount)(userdataPath);
 
     if (!accountToAssign.parentAccount) {
       throw new Error("Parent account is required");
@@ -215,15 +230,7 @@ export const liveDataWithRecipientAddressCommand = (
   options?: LiveDataCommandOptions,
 ) => {
   return async (userdataPath?: string) => {
-    await runCliLiveData({
-      currency: tx.accountToDebit.currency.speculosApp.name,
-      index: tx.accountToDebit.index,
-      ...(options?.useScheme && tx.accountToDebit.derivationMode
-        ? { scheme: tx.accountToDebit.derivationMode }
-        : {}),
-      add: true,
-      appjson: userdataPath,
-    });
+    await liveDataCommand(tx.accountToDebit, { useScheme: options?.useScheme })(userdataPath);
 
     const address = await getAccountAddress(tx.accountToCredit);
 

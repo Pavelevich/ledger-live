@@ -34,6 +34,7 @@
     "build:actions": "nx run-many -t build -p \"@actions/*\"",
     "build:cli": "nx run-many -t build -p @ledgerhq/live-cli",
     "build:wallet-cli": "nx run-many -t build -p @ledgerhq/wallet-cli",
+    "e2e:generate-userdata": "node apps/cli/bin/index.js e2eFixtures",
     "build:device-deps": "node apps/cli/scripts/rebuild-device-deps.mjs",
     "build:coin": "nx run-many -t build -p \"@ledgerhq/coin-*\"",
     "build:coin:deps": "nx run-many -t build -p \"@ledgerhq/coin-*\"",

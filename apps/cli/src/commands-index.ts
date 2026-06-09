@@ -50,6 +50,7 @@ import repl from "./commands/device/repl";
 import speculosList from "./commands/device/speculosList";
 import balanceHistory from "./commands/live/balanceHistory";
 import countervalues from "./commands/live/countervalues";
+import e2eFixtures from "./commands/live/e2eFixtures";
 import envs from "./commands/live/envs";
 import ledgerKeyRingProtocol from "./commands/live/ledgerKeyRingProtocol";
 import ledgerSync from "./commands/live/ledgerSync";
@@ -112,6 +113,7 @@ export default {
   speculosList,
   balanceHistory,
   countervalues,
+  e2eFixtures,
   envs,
   ledgerKeyRingProtocol,
   ledgerSync,

@@ -1,0 +1,136 @@
+name: "Restore E2E userdata fixtures"
+description: >
+  Restore the nightly-pre-generated e2e userdata fixtures (QAA-1285) from the S3
+  cache and export the E2E_USERDATA_* env vars consumed by the CLI helpers. Probes
+  today's key then backs off up to `max-days` days. On a miss it exports nothing,
+  so the test run transparently falls back to live generation.
+inputs:
+  accessKey:
+    type: string
+    required: true
+  secretKey:
+    type: string
+    required: true
+  sessionToken:
+    type: string
+    required: false
+  bucket:
+    type: string
+    required: false
+    default: ll-nx-cache
+  region:
+    type: string
+    required: true
+  endpoint:
+    description: "Optional S3 endpoint (e.g. direct-connect on macOS runners). Defaults to the standard S3 endpoint."
+    type: string
+    required: false
+  max-days:
+    description: "How many days to look back for the most recent fixture bundle."
+    type: string
+    required: false
+    default: "7"
+  max-age-hours:
+    description: "Exported as E2E_USERDATA_MAX_AGE_HOURS so the resolver accepts a bundle found within the look-back window."
+    type: string
+    required: false
+    default: "192"
+  destination:
+    description: "Where to extract the bundle (must match the test working directory)."
+    type: string
+    required: false
+    default: ${{ github.workspace }}
+outputs:
+  found:
+    description: "Whether a usable fixture bundle was restored."
+    value: ${{ steps.probe.outputs.found }}
+  key:
+    description: "The resolved cache key (empty on miss)."
+    value: ${{ steps.probe.outputs.key }}
+runs:
+  using: "composite"
+  steps:
+    - name: Install AWS CLI if needed (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        if ! command -v aws &> /dev/null; then
+          echo "Installing AWS CLI..."
+          curl -sS "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+          rm -rf awscliv2.zip aws
+        fi
+
+    - name: Probe S3 for the most recent fixture bundle
+      id: probe
+      shell: bash
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.accessKey }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.secretKey }}
+        AWS_SESSION_TOKEN: ${{ inputs.sessionToken }}
+      run: |
+        set -euo pipefail
+        BUCKET="${{ inputs.bucket }}"
+        REGION="${{ inputs.region }}"
+        ENDPOINT="${{ inputs.endpoint || format('s3.{0}.amazonaws.com', inputs.region) }}"
+        MAX_DAYS="${{ inputs.max-days }}"
+
+        echo "found=false" >> "$GITHUB_OUTPUT"
+        echo "key=" >> "$GITHUB_OUTPUT"
+
+        for i in $(seq 0 "$MAX_DAYS"); do
+          # Compute the UTC date i days ago portably (Linux + macOS runners).
+          DATE="$(node -e "process.stdout.write(new Date(Date.now()-$i*864e5).toISOString().slice(0,10).replace(/-/g,''))")"
+          KEY="$(node scripts/e2e-userdata-cache-key.mjs "$DATE")"
+          echo "Probing $KEY ..."
+          if aws s3api head-object \
+            --bucket "$BUCKET" \
+            --key "$KEY/cache.tzst" \
+            --endpoint-url "https://$ENDPOINT" \
+            --region "$REGION" > /dev/null 2>&1; then
+            echo "✅ Found fixtures: $KEY"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "key=$KEY" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+        done
+        echo "❌ No fixture bundle found in the last $MAX_DAYS day(s); tests will live-generate."
+
+    - name: Download fixture bundle
+      if: steps.probe.outputs.found == 'true'
+      uses: LedgerHQ/ledger-live/tools/actions/composites/cache/download@develop
+      with:
+        key: ${{ steps.probe.outputs.key }}
+        accessKey: ${{ inputs.accessKey }}
+        secretKey: ${{ inputs.secretKey }}
+        sessionToken: ${{ inputs.sessionToken }}
+        bucket: ${{ inputs.bucket }}
+        region: ${{ inputs.region }}
+        endpoint: ${{ inputs.endpoint }}
+        destination: ${{ inputs.destination }}
+
+    - name: Export E2E_USERDATA_* env
+      if: steps.probe.outputs.found == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        DIR="${{ inputs.destination }}/e2e/_fixtures"
+        ACCOUNTS="$DIR/userdata-accounts.json"
+        ADDRESSES="$DIR/addresses.json"
+        MANIFEST="$DIR/manifest.json"
+
+        if [ ! -f "$ACCOUNTS" ] || [ ! -f "$ADDRESSES" ] || [ ! -f "$MANIFEST" ]; then
+          echo "⚠️ Restored bundle is missing expected files in $DIR; falling back to live generation."
+          ls -la "$DIR" || true
+          exit 0
+        fi
+
+        {
+          echo "E2E_USERDATA_ACCOUNTS=$ACCOUNTS"
+          echo "E2E_USERDATA_ADDRESSES=$ADDRESSES"
+          echo "E2E_USERDATA_MANIFEST=$MANIFEST"
+          echo "E2E_USERDATA_MAX_AGE_HOURS=${{ inputs.max-age-hours }}"
+        } >> "$GITHUB_ENV"
+
+        echo "Exported E2E_USERDATA_* (accounts/addresses/manifest) from $DIR"
