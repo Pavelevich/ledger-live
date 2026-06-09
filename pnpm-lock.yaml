@@ -316,8 +316,8 @@ catalogs:
       specifier: 20.51.1
       version: 20.51.1
     electron:
-      specifier: 40.6.0
-      version: 40.6.0
+      specifier: 42.2.0
+      version: 42.2.0
     eslint-plugin-better-tailwindcss:
       specifier: 4.0.0-beta.3
       version: 4.0.0-beta.3
@@ -930,7 +930,7 @@ importers:
         version: 6.30.1(@datadog/browser-logs@6.30.1)
       '@datadog/electron-sdk':
         specifier: 0.3.0
-        version: 0.3.0(electron@40.6.0)
+        version: 0.3.0(electron@42.2.0)
       '@electron/fuses':
         specifier: 2.0.0
         version: 2.0.0
@@ -1477,7 +1477,7 @@ importers:
         version: 26.0.1(lodash@4.17.21)
       electron:
         specifier: 'catalog:'
-        version: 40.6.0
+        version: 42.2.0
       electron-builder:
         specifier: 26.0.1
         version: 26.0.1(lodash@4.17.21)
@@ -3238,7 +3238,7 @@ importers:
         version: 4.17.16
       electron:
         specifier: 'catalog:'
-        version: 40.6.0
+        version: 42.2.0
       oxfmt:
         specifier: 'catalog:'
         version: 0.36.0
@@ -15476,6 +15476,10 @@ packages:
     resolution: {integrity: sha512-Qkzpg2s9GnVV2I2BjRksUi43U5e6+zaQMcjoJy0C+C5oxaKl+fmckGDQFtRpZpZV0NQekuZZ+tGz7EA9TVnQtQ==}
     engines: {node: '>=12'}
 
+  '@electron/get@5.0.0':
+    resolution: {integrity: sha512-pjoBpru1KdEtcExBnuHAP1cAc/5faoedw0hzJkL3o4/IJp7HNF1+fbrdxT3gMYRX2oJfvnA/WXeCTVQpYYxyJA==}
+    engines: {node: '>=22.12.0'}
+
   '@electron/node-gyp@https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2':
     resolution: {tarball: https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2}
     version: 10.2.0-electron.1
@@ -21973,7 +21977,7 @@ packages:
       metro-react-native-babel-preset: '*'
       react: 19.0.0
       react-dom: 19.0.0
-      webpack: ^5.89.0
+      webpack: '*'
     peerDependenciesMeta:
       '@react-native/babel-preset':
         optional: true
@@ -24298,7 +24302,7 @@ packages:
     resolution: {integrity: sha512-/FQM1EDkTsf63Ub2C6O7GuYFDsSXUwsaZDurV0np41ocwq0jthUAYCmhBX9f+KwlaCgIuWyr/4WlUQUBfKfZog==}
     engines: {node: '>=6'}
     peerDependencies:
-      rxjs: ^5.5.10
+      rxjs: '*'
       zenObservable: '*'
     peerDependenciesMeta:
       rxjs:
@@ -27150,9 +27154,9 @@ packages:
     engines: {node: '>= 12.20.55'}
     hasBin: true
 
-  electron@40.6.0:
-    resolution: {integrity: sha512-ett8W+yOFGDuM0vhJMamYSkrbV3LoaffzJd9GfjI96zRAxyrNqUSKqBpf/WGbQCweDxX2pkUCUfrv4wwKpsFZA==}
-    engines: {node: '>= 12.20.55'}
+  electron@42.2.0:
+    resolution: {integrity: sha512-b2Tc7sIKiZEl0tBVwFM5GJ+FT5KYhmy9QJHjx8BGVZPVW2SctXWEvrE959ElB56qw7H05dBkhlikDA1DmpaAMw==}
+    engines: {node: '>= 22.12.0'}
     hasBin: true
 
   elegant-spinner@1.0.1:
@@ -36563,6 +36567,10 @@ packages:
     resolution: {integrity: sha512-y+8YjDFzWdQlSE9N5nzKMT3g4a5UBX1HKowfdXh0uvAnTaqqwqB92Jt4UXBAeKekDs5IaDKyJFR4X1gYVCgXcw==}
     engines: {node: '>=20.18.1'}
 
+  undici@7.27.2:
+    resolution: {integrity: sha512-uZsKNuzQxDMUY6M3pIMvy5tvlGmtq8XJ2oLAkfRKGNu+1VQAIvLy2xIVG5ATZl5wDXl/tddByAWCizRbOme+TA==}
+    engines: {node: '>=20.18.1'}
+
   unfetch@3.1.2:
     resolution: {integrity: sha512-L0qrK7ZeAudGiKYw6nzFjnJ2D5WHblUBwmHIqtPS6oKUd+Hcpk7/hKsSmcHsTlpd1TbTNsiRBUKRq3bHLNIqIw==}
 
@@ -42249,10 +42257,10 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@datadog/electron-sdk@0.3.0(electron@40.6.0)':
+  '@datadog/electron-sdk@0.3.0(electron@42.2.0)':
     dependencies:
       dd-trace: 5.103.0
-      electron: 40.6.0
+      electron: 42.2.0
     transitivePeerDependencies:
       - '@openfeature/server-sdk'
 
@@ -42446,6 +42454,19 @@ snapshots:
       sumchecker: 3.0.1
     optionalDependencies:
       global-agent: 3.0.0
+    transitivePeerDependencies:
+      - supports-color
+
+  '@electron/get@5.0.0':
+    dependencies:
+      debug: 4.4.3
+      env-paths: 3.0.0
+      graceful-fs: 4.2.11
+      progress: 2.0.3
+      semver: 7.8.1
+      sumchecker: 3.0.1
+    optionalDependencies:
+      undici: 7.27.2
     transitivePeerDependencies:
       - supports-color
 
@@ -59254,9 +59275,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@40.6.0:
+  electron@42.2.0:
     dependencies:
-      '@electron/get': 2.0.3
+      '@electron/get': 5.0.0
       '@types/node': 24.12.0
       extract-zip: 2.0.1
     transitivePeerDependencies:
@@ -72062,6 +72083,9 @@ snapshots:
   undici@6.19.2: {}
 
   undici@7.18.2: {}
+
+  undici@7.27.2:
+    optional: true
 
   unfetch@3.1.2: {}
 
