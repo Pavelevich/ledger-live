@@ -8,7 +8,7 @@ import { trackPage } from "~/renderer/analytics/segment";
 import { useAccountUnit } from "~/renderer/hooks/useAccountUnit";
 import type { StepProps } from "~/renderer/modals/Send/types";
 import { AleoSendStepRecipient } from "./AleoSendStepRecipient";
-import { ALEO_ACCOUNT_1 } from "../__mocks__/account.mock";
+import { ALEO_ACCOUNT_1, makeAleoTokenAccount } from "../__mocks__/account.mock";
 import { makeAleoTransaction } from "../__mocks__/transaction.mock";
 
 jest.mock("~/renderer/hooks/useAccountUnit");
@@ -198,5 +198,31 @@ describe("AleoSendStepRecipient", () => {
     expect(result.mode).toBe(TRANSACTION_TYPE.TRANSFER_PUBLIC);
 
     expect(result).not.toHaveProperty("properties");
+  });
+
+  it("should call updateTransaction with TRANSFER_TOKEN_PRIVATE when token subAccount is selected", async () => {
+    const tokenAccount = makeAleoTokenAccount();
+    const tokenTransaction = makeAleoTransaction({
+      mode: TRANSACTION_TYPE.TRANSFER_PUBLIC,
+      subAccountId: "token-sub-account",
+    });
+    const updateTransaction = jest.fn();
+    const { user } = render(
+      <AleoSendStepRecipient
+        {...defaultProps}
+        account={tokenAccount}
+        parentAccount={ALEO_ACCOUNT_1}
+        transaction={tokenTransaction}
+        updateTransaction={updateTransaction}
+      />,
+    );
+
+    await user.click(screen.getByText(/Private balance/));
+
+    expect(updateTransaction).toHaveBeenCalledTimes(1);
+    const updaterFn = updateTransaction.mock.calls[0][0];
+    const result = updaterFn(tokenTransaction);
+    expect(result.mode).toBe(TRANSACTION_TYPE.TRANSFER_TOKEN_PRIVATE);
+    expect(result.properties).toEqual({ amountRecordCommitments: [], feeRecordCommitment: null });
   });
 });

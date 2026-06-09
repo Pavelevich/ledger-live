@@ -5,7 +5,7 @@ import type { AleoAccount, AleoUnspentRecord } from "@ledgerhq/live-common/famil
 import { MAX_PRIVATE_RECORDS_PER_TRANSACTION } from "@ledgerhq/live-common/families/aleo/constants";
 import { getEstimatedSigningTime } from "@ledgerhq/live-common/families/aleo/utils";
 import { useAccountUnit } from "~/renderer/hooks/useAccountUnit";
-import { ALEO_ACCOUNT_1 } from "../__mocks__/account.mock";
+import { ALEO_ACCOUNT_1, makeAleoTokenAccount } from "../__mocks__/account.mock";
 import { makeRecord } from "../__mocks__/record.mock";
 import { makeAleoTransaction } from "../__mocks__/transaction.mock";
 import QuickAmountSelector from "./QuickAmountSelector";
@@ -255,5 +255,27 @@ describe("QuickAmountSelector", () => {
     );
 
     expect(screen.getByText(/Spendable Balance/i)).toBeInTheDocument();
+  });
+
+  it("should use token account private records when account is a token account", async () => {
+    const tokenRecord1 = makeRecord("5000000");
+    const tokenRecord2 = makeRecord("3000000");
+    const tokenAccount = makeAleoTokenAccount({
+      unspentPrivateRecords: [tokenRecord1, tokenRecord2],
+    });
+    const updateTransaction = jest.fn();
+    const { user } = render(
+      <QuickAmountSelector
+        account={tokenAccount}
+        transaction={makeAleoTransaction({
+          mode: "transfer_private",
+          properties: { amountRecordCommitments: [], feeRecordCommitment: null },
+        })}
+        updateTransaction={updateTransaction}
+      />,
+    );
+
+    await user.click(screen.getByText("Fast"));
+    expect(updateTransaction).toHaveBeenCalled();
   });
 });

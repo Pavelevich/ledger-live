@@ -128,4 +128,42 @@ describe("useAccountChangeGuard", () => {
 
     expect(onChangeAccount).toHaveBeenCalledWith(ALEO_ACCOUNT_1, ALEO_ACCOUNT_2);
   });
+
+  it("should reset a private token self-transfer to CONVERT_TOKEN_PUBLIC_TO_PRIVATE", () => {
+    mockIsPrivateTransaction.mockReturnValue(true);
+    mockIsSelfTransferTransaction.mockReturnValue(true);
+    const { result } = renderHook(() => useAccountChangeGuard(onChangeAccount, updateTransaction));
+
+    result.current(ALEO_ACCOUNT_2, null);
+
+    const updater = updateTransaction.mock.calls[0][0];
+    const tx = makeAleoTransaction({
+      mode: TRANSACTION_TYPE.CONVERT_TOKEN_PRIVATE_TO_PUBLIC,
+      subAccountId: "token-sub-account",
+      properties: { amountRecordCommitments: ["abc"], feeRecordCommitment: null },
+    });
+    const nextTx = updater(tx);
+
+    expect(nextTx.mode).toBe(TRANSACTION_TYPE.CONVERT_TOKEN_PUBLIC_TO_PRIVATE);
+    expect(nextTx.properties).toBeUndefined();
+  });
+
+  it("should reset a private token transfer to TRANSFER_TOKEN_PUBLIC", () => {
+    mockIsPrivateTransaction.mockReturnValue(true);
+    mockIsSelfTransferTransaction.mockReturnValue(false);
+    const { result } = renderHook(() => useAccountChangeGuard(onChangeAccount, updateTransaction));
+
+    result.current(ALEO_ACCOUNT_2, null);
+
+    const updater = updateTransaction.mock.calls[0][0];
+    const tx = makeAleoTransaction({
+      mode: TRANSACTION_TYPE.TRANSFER_TOKEN_PRIVATE,
+      subAccountId: "token-sub-account",
+      properties: { amountRecordCommitments: ["xyz"], feeRecordCommitment: null },
+    });
+    const nextTx = updater(tx);
+
+    expect(nextTx.mode).toBe(TRANSACTION_TYPE.TRANSFER_TOKEN_PUBLIC);
+    expect(nextTx.properties).toBeUndefined();
+  });
 });

@@ -2,10 +2,11 @@ import React from "react";
 import BigNumber from "bignumber.js";
 import { render, screen } from "tests/testSetup";
 import type { AleoAccount } from "@ledgerhq/live-common/families/aleo/types";
+import type { AccountLike } from "@ledgerhq/types-live";
 import { useAccountUnit } from "~/renderer/hooks/useAccountUnit";
 import { PRIVATE_BALANCE_PLACEHOLDER } from "../constants";
 import BalanceSelector from "./BalanceSelector";
-import { ALEO_ACCOUNT_1 } from "../__mocks__/account.mock";
+import { ALEO_ACCOUNT_1, makeAleoTokenAccount } from "../__mocks__/account.mock";
 import { makeAleoTransaction } from "../__mocks__/transaction.mock";
 
 jest.mock("~/renderer/hooks/useAccountUnit");
@@ -185,6 +186,31 @@ describe("BalanceSelector", () => {
 
       expect(onChange).toHaveBeenCalledWith("public");
     });
+  });
+
+  it("should use token account private balance placeholder when subAccount has no private balance", () => {
+    const mainAccountWithNullPrivate: AleoAccount = {
+      ...mockAccount,
+      aleoResources: {
+        ...mockAccount.aleoResources!,
+        privateBalance: null,
+      },
+    };
+    const tokenAccount = makeAleoTokenAccount({
+      transparentBalance: new BigNumber(25_000_000),
+      privateBalance: null,
+    }) as unknown as AccountLike;
+
+    render(
+      <BalanceSelector
+        transaction={makeAleoTransaction({ mode: "transfer_public" })}
+        mainAccount={mainAccountWithNullPrivate}
+        subAccount={tokenAccount}
+        onChange={onChange}
+      />,
+    );
+
+    expect(screen.getByText(PRIVATE_BALANCE_PLACEHOLDER)).toBeInTheDocument();
   });
 
   it("should display the private balance placeholder when privateBalance is null", () => {

@@ -1,10 +1,9 @@
 import invariant from "invariant";
 import { act } from "react";
-import type { TokenAccount } from "@ledgerhq/types-live";
 import { renderHook } from "tests/testSetup";
 import AccountHeaderActions from "../AccountHeaderManageActions";
 import { AleoCustomModal } from "../constants";
-import { ALEO_ACCOUNT_1, NEW_ALEO_ACCOUNT } from "../__mocks__/account.mock";
+import { ALEO_ACCOUNT_1, makeAleoTokenAccount, NEW_ALEO_ACCOUNT } from "../__mocks__/account.mock";
 
 jest.mock("@ledgerhq/live-common/bridge/useAccountBridge", () => ({
   useAccountBridge: () => ({
@@ -16,12 +15,35 @@ describe("AccountHeaderManageActions", () => {
   const hook = AccountHeaderActions;
   invariant(hook, "aleo: type guard AccountHeaderActions");
 
-  describe("when account is not of type Account", () => {
-    it("should return an empty array", () => {
-      const tokenAccount = { ...ALEO_ACCOUNT_1, type: "TokenAccount" } as unknown as TokenAccount;
-      const { result } = renderHook(() => hook({ account: tokenAccount, parentAccount: null }));
+  describe("when account is a token account", () => {
+    it("should return self-transfer action for token accounts", () => {
+      const tokenAccount = makeAleoTokenAccount();
+      const { result } = renderHook(() =>
+        hook({ account: tokenAccount, parentAccount: ALEO_ACCOUNT_1 }),
+      );
+      const action = result.current?.[0];
 
-      expect(result.current).toEqual([]);
+      expect(action).not.toBeUndefined();
+      expect(action?.disabled).toBe(false);
+    });
+
+    it("should dispatch openModal with parentAccount when onClick is called", () => {
+      const tokenAccount = makeAleoTokenAccount();
+      const { result, store } = renderHook(() =>
+        hook({ account: tokenAccount, parentAccount: ALEO_ACCOUNT_1 }),
+      );
+      const action = result.current?.[0];
+
+      act(() => {
+        action?.onClick();
+      });
+
+      const modalState = store.getState().modals[AleoCustomModal.SELF_TRANSFER];
+
+      expect(modalState).toEqual({
+        isOpened: true,
+        data: { account: tokenAccount, parentAccount: ALEO_ACCOUNT_1 },
+      });
     });
   });
 
@@ -71,7 +93,7 @@ describe("AccountHeaderManageActions", () => {
 
       expect(modalState).toEqual({
         isOpened: true,
-        data: { account: ALEO_ACCOUNT_1 },
+        data: { account: ALEO_ACCOUNT_1, parentAccount: null },
       });
     });
   });

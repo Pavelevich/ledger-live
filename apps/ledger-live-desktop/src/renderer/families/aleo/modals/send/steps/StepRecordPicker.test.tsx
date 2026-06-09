@@ -23,15 +23,12 @@ import i18n from "~/renderer/i18n/init";
 import type { StepProps } from "~/renderer/modals/Send/types";
 import StepRecordPicker from "./StepRecordPicker";
 import { getAleoCurrencyConfig } from "../../../shared/utils";
-import { ALEO_ACCOUNT_1 } from "../../../__mocks__/account.mock";
+import { ALEO_ACCOUNT_1, makeAleoTokenAccount } from "../../../__mocks__/account.mock";
 import { mockAleoCoinConfig } from "../../../__mocks__/config.mock";
 
 jest.mock("~/renderer/hooks/useAccountUnit");
 jest.mock("~/renderer/hooks/useDateFormatter");
-jest.mock("@ledgerhq/live-common/currencies/index", () => ({
-  __esModule: true,
-  ...jest.requireActual("@ledgerhq/live-common/currencies/index"),
-}));
+jest.mock("@ledgerhq/live-common/currencies/index");
 jest.mock("../../../shared/utils", () => ({
   getAleoCurrencyConfig: jest.fn(),
 }));
@@ -654,6 +651,24 @@ describe("StepRecordPicker", () => {
       <StepRecordPicker
         {...defaultProps}
         account={mockAleoAccount}
+        transaction={privateTransaction}
+      />,
+    );
+
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+  });
+
+  it("should render token account private records when account is a token account", () => {
+    mockGetAleoCurrencyConfig.mockReturnValue(mockAleoCoinConfig);
+
+    const tokenAccount = makeAleoTokenAccount({
+      unspentPrivateRecords: [record1, record2],
+    }) as unknown as AleoAccount;
+
+    render(
+      <StepRecordPicker
+        {...defaultProps}
+        account={tokenAccount}
         transaction={privateTransaction}
       />,
     );

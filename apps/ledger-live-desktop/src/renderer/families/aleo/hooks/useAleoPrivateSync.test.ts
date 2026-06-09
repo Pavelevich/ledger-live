@@ -268,8 +268,12 @@ describe("useAleoPrivateSync", () => {
     });
 
     it("should not call sync for a non-Aleo account (no aleoResources)", async () => {
-      // Plain account without aleoResources — isAleoAccount returns false
-      const { result } = renderHook(() => useAleoPrivateSync({ account: { ...ALEO_ACCOUNT_1 } }));
+      const nonAleoAccount = {
+        ...ALEO_ACCOUNT_1,
+        currency: { ...ALEO_ACCOUNT_1.currency, family: "ethereum" },
+      };
+
+      const { result } = renderHook(() => useAleoPrivateSync({ account: nonAleoAccount }));
 
       await act(async () => {
         result.current.start();

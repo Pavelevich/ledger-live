@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen } from "tests/testSetup";
 import { TRANSACTION_TYPE } from "@ledgerhq/live-common/families/aleo/constants";
 import { isSelfTransferTransaction } from "@ledgerhq/live-common/families/aleo/utils";
-import { ALEO_ACCOUNT_1, ALEO_ACCOUNT_2 } from "../../../__mocks__/account.mock";
+import { ALEO_ACCOUNT_1, ALEO_ACCOUNT_2, makeAleoTokenAccount } from "../../../__mocks__/account.mock";
 import { makeAleoTransaction } from "../../../__mocks__/transaction.mock";
 import StepSummaryRecipientValue from "./StepSummaryRecipientValue";
 
@@ -61,5 +61,26 @@ describe("StepSummaryRecipientValue", () => {
 
     expect(screen.getByText(recipient)).toBeInTheDocument();
     expect(screen.queryByTestId("recipient-badge")).not.toBeInTheDocument();
+  });
+
+  it("should render recipient address for token transfer", () => {
+    const recipient = "aleo1tokenrecipient";
+    const tokenAccount = makeAleoTokenAccount();
+
+    mockedIsSelfTransferTransaction.mockReturnValue(false);
+
+    render(
+      <StepSummaryRecipientValue
+        account={tokenAccount}
+        parentAccount={ALEO_ACCOUNT_1}
+        transaction={makeAleoTransaction({
+          mode: TRANSACTION_TYPE.TRANSFER_TOKEN_PUBLIC,
+          recipient,
+          subAccountId: "token-sub-account",
+        })}
+      />,
+    );
+
+    expect(screen.getByText(recipient)).toBeInTheDocument();
   });
 });
