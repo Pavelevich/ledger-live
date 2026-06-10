@@ -1,0 +1,29 @@
+services:
+  stellar:
+    image: stellar/quickstart:latest
+    container_name: stellar-quickstart
+    platform: linux/amd64
+    # `--local` is the modern replacement for `--standalone`. The quickstart
+    # /start script (see lines 250-254) reads NETWORK_PASSPHRASE from the
+    # environment when in local mode and otherwise falls back to the
+    # "Standalone Network ; February 2017" default. We force it to match
+    # the value the coin module hardcodes (`Networks.PUBLIC`), so we do not
+    # have to touch coin-stellar to swap the passphrase for tests.
+    environment:
+      NETWORK_PASSPHRASE: "Public Global Stellar Network ; September 2015"
+    command: ["--local"]
+    # Healthcheck waits for BOTH Horizon and Friendbot. Friendbot's supervisor
+    # process starts ~10s after Horizon, and nginx returns 502 on /friendbot
+    # in the interim — without this combined probe, `compose up --wait`
+    # returns too early and the first friendbot call races and 502s.
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:8000/ | grep -q horizon_version && curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/friendbot | grep -vqE '^(502|503|000)$$'",
+        ]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+    ports:
+      - "8000:8000"
