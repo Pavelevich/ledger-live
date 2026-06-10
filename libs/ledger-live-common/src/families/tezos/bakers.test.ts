@@ -39,7 +39,6 @@ const accountTZrevealedDelegating = makeAccountRaw(
 
 describe("tezos bakers", () => {
   beforeAll(() => {
-    // Initialize CryptoAssetsStore so fromAccountRaw can resolve the tezos currency
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     setCryptoAssetsStore({
       findTokenById: async () => undefined,

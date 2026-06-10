@@ -118,7 +118,6 @@ export type TezosOperationExtra = {
   id?: number; // Used as most recent operation id for incremental sync
 };
 
-// Signer types (moved from coin-tezos; no @ledgerhq/live-signer-tezos package exists)
 export type TezosAddress = {
   address: string;
   publicKey: string;
