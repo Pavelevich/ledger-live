@@ -27,6 +27,8 @@ describe("HardwareUpdate - Nano S swap incompatibility analytics", () => {
         i18nKeyDescription="swap.wrongDevice.description"
         variant="provider"
         provider="thorswap"
+        sourceCurrency="bitcoin"
+        targetCurrency="ethereum"
       />,
     );
 
@@ -38,6 +40,8 @@ describe("HardwareUpdate - Nano S swap incompatibility analytics", () => {
         deviceModel: "nanoS",
         variant: "provider",
         provider: "thorswap",
+        sourceCurrency: "bitcoin",
+        targetCurrency: "ethereum",
       }),
       true,
       true,
@@ -52,6 +56,8 @@ describe("HardwareUpdate - Nano S swap incompatibility analytics", () => {
         i18nKeyDescription="swap.wrongDevice.description"
         variant="provider"
         provider="thorswap"
+        sourceCurrency="bitcoin"
+        targetCurrency="ethereum"
       />,
     );
 
@@ -64,6 +70,8 @@ describe("HardwareUpdate - Nano S swap incompatibility analytics", () => {
       deviceModel: "nanoS",
       variant: "provider",
       provider: "thorswap",
+      sourceCurrency: "bitcoin",
+      targetCurrency: "ethereum",
     });
     expect(openURL).toHaveBeenCalledWith("https://shop.ledger.com/pages/hardware-wallet");
   });
@@ -75,6 +83,8 @@ describe("HardwareUpdate - Nano S swap incompatibility analytics", () => {
         i18nKeyDescription="swap.wrongDevice.description"
         variant="provider"
         provider="thorswap"
+        sourceCurrency="bitcoin"
+        targetCurrency="ethereum"
       />,
     );
 
@@ -87,6 +97,8 @@ describe("HardwareUpdate - Nano S swap incompatibility analytics", () => {
       deviceModel: "nanoS",
       variant: "provider",
       provider: "thorswap",
+      sourceCurrency: "bitcoin",
+      targetCurrency: "ethereum",
     });
   });
 
@@ -96,6 +108,8 @@ describe("HardwareUpdate - Nano S swap incompatibility analytics", () => {
         i18nKeyTitle="swap.incompatibility.ton_title"
         i18nKeyDescription="swap.incompatibility.ton_description"
         variant="currency"
+        sourceCurrency="ton"
+        targetCurrency="bitcoin"
       />,
     );
 
@@ -106,6 +120,8 @@ describe("HardwareUpdate - Nano S swap incompatibility analytics", () => {
         flow: "swap",
         deviceModel: "nanoS",
         variant: "currency",
+        sourceCurrency: "ton",
+        targetCurrency: "bitcoin",
       }),
       true,
       true,

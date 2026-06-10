@@ -183,6 +183,8 @@ export const LiveAppDrawer = () => {
                   i18nKeyValues={{ provider: getProviderName(data.provider) }}
                   variant="provider"
                   provider={data.provider}
+                  sourceCurrency={data.exchange.fromCurrency.id}
+                  targetCurrency={data.exchange.toCurrency.id}
                 />
               );
             }
@@ -193,6 +195,8 @@ export const LiveAppDrawer = () => {
                   i18nKeyTitle={keys.title}
                   i18nKeyDescription={keys.description}
                   variant="currency"
+                  sourceCurrency={data.exchange.fromCurrency.id}
+                  targetCurrency={data.exchange.toCurrency.id}
                 />
               );
             }
