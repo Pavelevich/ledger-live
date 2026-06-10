@@ -12,6 +12,11 @@ export const FAMILIES_MAPPING_WAPI_TO_LL = {
 
 export const FAMILIES_MAPPING_LL_TO_WAPI = reverseRecord(FAMILIES_MAPPING_WAPI_TO_LL);
 
+/** Families whose `seedIdentifier` is the account's public key;
+ * for others (e.g. UTXO) it is not, so it must not be exposed as `publicKey`.
+ */
+export const FAMILIES_WITH_PUBLIC_KEY_SEED_IDENTIFIER: ReadonlySet<string> = new Set(["tezos"]);
+
 /**
  * FIXME
  * This is not robust, we should have an explicit adapter between the wallet API currencies (families) and live currencies (families)

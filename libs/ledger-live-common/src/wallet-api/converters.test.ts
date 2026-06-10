@@ -1,8 +1,10 @@
 import { Account } from "@ledgerhq/types-live";
+import { getCryptoCurrencyById } from "@ledgerhq/cryptoassets";
+import { initialState as walletState } from "@ledgerhq/live-wallet/store";
 import BigNumber from "bignumber.js";
 import "../__tests__/test-helpers/setup";
 import type { Transaction } from "../coin-modules/transaction-types";
-import { getWalletAPITransactionSignFlowInfos } from "./converters";
+import { accountToWalletAPIAccount, getWalletAPITransactionSignFlowInfos } from "./converters";
 import type { WalletAPITransaction } from "./types";
 
 const evmBridge = jest.fn();
@@ -92,5 +94,36 @@ describe("getWalletAPITransactionSignFlowInfos", () => {
     expect(canEditFees).toBe(false);
     expect(hasFeesProvided).toBe(false);
     expect(liveTx).toEqual(expectedLiveTx);
+  });
+});
+
+describe("accountToWalletAPIAccount", () => {
+  const makeAccount = (currencyId: string, seedIdentifier: string): Account =>
+    ({
+      type: "Account",
+      id: `js:2:${currencyId}:addr:`,
+      index: 0,
+      seedIdentifier,
+      freshAddress: "addr",
+      currency: getCryptoCurrencyById(currencyId),
+      balance: new BigNumber(0),
+      spendableBalance: new BigNumber(0),
+      blockHeight: 0,
+      lastSyncDate: new Date(0),
+    }) as unknown as Account;
+
+  it("exposes publicKey from seedIdentifier for families whose seedIdentifier is the public key (tezos)", () => {
+    const result = accountToWalletAPIAccount(walletState, makeAccount("tezos", "edpkSeed"));
+    expect(result.publicKey).toBe("edpkSeed");
+  });
+
+  it("omits publicKey for families where seedIdentifier is not a public key (bitcoin)", () => {
+    const result = accountToWalletAPIAccount(walletState, makeAccount("bitcoin", "xpub-seed"));
+    expect(result).not.toHaveProperty("publicKey");
+  });
+
+  it("omits publicKey for an allowlisted family with an empty seedIdentifier", () => {
+    const result = accountToWalletAPIAccount(walletState, makeAccount("tezos", ""));
+    expect(result).not.toHaveProperty("publicKey");
   });
 });

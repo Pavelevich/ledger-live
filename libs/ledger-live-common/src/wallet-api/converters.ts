@@ -10,7 +10,11 @@ import {
   WalletAPITransaction,
   WalletAPISupportedCurrency,
 } from "./types";
-import { FAMILIES_MAPPING_LL_TO_WAPI, FAMILIES_MAPPING_WAPI_TO_LL } from "./constants";
+import {
+  FAMILIES_MAPPING_LL_TO_WAPI,
+  FAMILIES_MAPPING_WAPI_TO_LL,
+  FAMILIES_WITH_PUBLIC_KEY_SEED_IDENTIFIER,
+} from "./constants";
 
 // The namespace is a randomly generated uuid v4 from https://www.uuidgenerator.net/
 const NAMESPACE = "c3c78073-6844-409e-9e75-171ab4c7f9a2";
@@ -59,6 +63,12 @@ export function accountToWalletAPIAccount(
   }
   const name = accountNameWithDefaultSelector(walletState, account);
 
+  // Only allowlisted families expose publicKey, and only when seedIdentifier is populated.
+  const publicKey =
+    FAMILIES_WITH_PUBLIC_KEY_SEED_IDENTIFIER.has(account.currency.family) && account.seedIdentifier
+      ? account.seedIdentifier
+      : undefined;
+
   return {
     id: walletApiId,
     name,
@@ -68,6 +78,7 @@ export function accountToWalletAPIAccount(
     spendableBalance: account.spendableBalance,
     blockHeight: account.blockHeight,
     lastSyncDate: account.lastSyncDate,
+    ...(publicKey ? { publicKey } : {}),
   };
 }
 
