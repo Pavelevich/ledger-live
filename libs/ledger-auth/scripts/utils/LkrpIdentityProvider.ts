@@ -5,13 +5,14 @@ import {
 } from "../../src/errors";
 import { postForm, postJson } from "../../src/http";
 import type { IdentityProvider, IdPAuthParams, KeycloakToken } from "../../src/types";
+import type { KeyPair } from "./types";
 
 export class LkrpIdentityProvider implements IdentityProvider<LKRPChallenge> {
   readonly brokerId = "lkrp";
 
   constructor(
-    private readonly signer: Signer,
-    private readonly memberCredentials: MemberCredentials,
+    private readonly keypair: KeyPair,
+    private readonly trustchainId: string,
   ) {}
 
   async authenticate(request: IdPAuthParams<LKRPChallenge>): Promise<KeycloakToken> {
@@ -85,12 +86,12 @@ export class LkrpIdentityProvider implements IdentityProvider<LKRPChallenge> {
     const unsignedChallengeTLV = this.getUnsignedChallengeTLV(challenge.tlv);
     return {
       credential: this.credential(),
-      attestation: this.getAttestation(),
-      signature: this.signer.sign(this.memberCredentials.privatekey, unsignedChallengeTLV),
+      attestation: this.getAttestation().toString("hex"),
+      signature: this.keypair.sign(unsignedChallengeTLV).toString("hex"),
     };
   }
 
-  private getUnsignedChallengeTLV(tlv: string): string {
+  private getUnsignedChallengeTLV(tlv: string): Buffer {
     // The unsigned challenge is the original TLV with the signature and attestation fields removed.
     const tlvBytes = Buffer.from(tlv, "hex");
     // Tags to strip to rebuild the canonical "unsigned challenge" the relying party (rp) signed:
@@ -106,18 +107,22 @@ export class LkrpIdentityProvider implements IdentityProvider<LKRPChallenge> {
       }
       i += 2 + length; // move to the next TLV entry
     }
-    return Buffer.concat(fields).toString("hex");
+    return Buffer.concat(fields);
   }
 
   private credential(): ChallengeSignature["credential"] {
-    // curveId 33 = secp256k1, signAlgorithm 1 = ECDSA (matches the challenge's rp credential).
-    return { version: 0, curveId: 33, signAlgorithm: 1, publicKey: this.memberCredentials.pubkey };
+    return {
+      version: 0,
+      curveId: 33, // 33 = secp256k1
+      signAlgorithm: 1, // 1 = ECDSA
+      publicKey: this.keypair.publicKey.toString("hex"),
+    };
   }
 
   // Spec https://ledgerhq.atlassian.net/wiki/spaces/TA/pages/4335960138/ARCH+LedgerLive+Auth+specifications
-  private getAttestation(): string {
-    const bytes = new TextEncoder().encode(this.memberCredentials.trustchainId);
-    return Buffer.from([0x02, bytes.length, ...bytes]).toString("hex");
+  private getAttestation(): Buffer {
+    const bytes = new TextEncoder().encode(this.trustchainId);
+    return Buffer.from([0x02, bytes.length, ...bytes]);
   }
 }
 
@@ -133,13 +138,7 @@ function describeError(e: unknown): string {
 
 // --- Types ---
 
-export type MemberCredentials = {
-  trustchainId: string;
-  pubkey: string;
-  privatekey: string;
-};
-
-export type LKRPChallenge = { json: ChallengeJSON; tlv: string };
+type LKRPChallenge = { json: ChallengeJSON; tlv: string };
 
 type ChallengeJSON = {
   version: number;
