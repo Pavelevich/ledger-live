@@ -56,7 +56,7 @@ export const FF_STAKE_PROGRAMS_MODAL: OptionalFeatureMap = {
   stakePrograms: {
     enabled: true,
     params: {
-      list: ["ethereum", "cosmos"],
+      list: ["cosmos"],
       redirects: {
         "ethereum/erc20/usd__coin": {
           platform: "earn",
@@ -65,6 +65,14 @@ export const FF_STAKE_PROGRAMS_MODAL: OptionalFeatureMap = {
             cryptoAssetId: "ethereum/erc20/usd__coin",
             intent: "deposit",
             deposit: "stablecoin",
+          },
+        },
+        ethereum: {
+          platform: "earn",
+          name: "Earn - Deposit",
+          queryParams: {
+            cryptoAssetId: "ethereum",
+            intent: "deposit",
           },
         },
       },

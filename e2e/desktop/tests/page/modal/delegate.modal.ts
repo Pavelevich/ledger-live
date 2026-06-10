@@ -32,7 +32,7 @@ export class DelegateModal extends Modal {
     .getByTestId("check-icon")
     .locator('path[fill]:not([fill="transparent"])');
   readonly cryptoAmountField = this.page.getByTestId("modal-amount-field");
-  private lidoProvider = this.page.getByTestId("stake-provider-container-lido");
+  private lidoProvider = this.page.getByText("Lido");
 
   @step("Get title provider on row $0")
   async getTitleProvider(row: number): Promise<string> {
