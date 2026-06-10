@@ -162,8 +162,14 @@ describe("parseMicrocredits", () => {
     expect(() => parseMicrocredits(value)).toThrow(`aleo: invalid microcredits format (${value})`);
   });
 
+  it("should parse microcredits with u32 suffix", () => {
+    const result = parseMicrocredits("1000000u32");
+
+    expect(result).toBe("1000000");
+  });
+
   it("should throw error for invalid format", () => {
-    const value = "1000000u32";
+    const value = "1000000u";
     expect(() => parseMicrocredits(value)).toThrow(`aleo: invalid microcredits format (${value})`);
   });
 });
@@ -403,6 +409,18 @@ describe("toBridgeOperation", () => {
 
     expect(result.type).toBe("OUT");
     expect(result.id).toBe(encodeOperationId(ledgerAccountId, rawTx.transaction_id, "OUT"));
+  });
+
+  it("should attach tokenInfo when the transaction is a token transfer", () => {
+    const rawTx = getMockedPublicTransaction({
+      program_id: "usdcx_stablecoin.aleo",
+    });
+
+    const result = toBridgeOperation(ledgerAccountId, rawTx, recipientAddress, true);
+
+    expect(result.extra.tokenInfo).toEqual({
+      programId: "usdcx_stablecoin.aleo",
+    });
   });
 });
 
