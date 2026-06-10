@@ -19,8 +19,8 @@ catalogs:
       specifier: 3.3.0
       version: 3.3.0
     '@ledgerhq/coin-xrp':
-      specifier: 7.21.7
-      version: 7.21.7
+      specifier: 7.22.0
+      version: 7.22.0
     '@ledgerhq/crypto-icons':
       specifier: 2.0.4
       version: 2.0.4
@@ -7851,7 +7851,7 @@ importers:
         version: link:../coin-modules/coin-vechain
       '@ledgerhq/coin-xrp':
         specifier: 'catalog:'
-        version: 7.21.7(@ledgerhq/errors@libs+ledgerjs+packages+errors)(@ledgerhq/live-network@libs+live-network)(@ledgerhq/logs@libs+ledgerjs+packages+logs)
+        version: 7.22.0(@ledgerhq/live-env@libs+env)(react-redux@9.2.0(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
       '@ledgerhq/cryptoassets':
         specifier: workspace:^
         version: link:../ledgerjs/packages/cryptoassets
@@ -13185,7 +13185,7 @@ packages:
   '@apollo/server@4.12.2':
     resolution: {integrity: sha512-jKRlf+sBMMdKYrjMoiWKne42Eb6paBfDOr08KJnUaeaiyWFj+/040FjVPQI7YGLfdwnYIsl1NUUqS2UdgezJDg==}
     engines: {node: '>=14.16.0'}
-    deprecated: Apollo Server v4 is deprecated and will transition to end-of-life on January 26, 2026. As long as you are already using a non-EOL version of Node.js, upgrading to v5 should take only a few minutes. See https://www.apollographql.com/docs/apollo-server/previous-versions for details.
+    deprecated: Apollo Server v4 is end-of-life since January 26, 2026. As long as you are already using a non-EOL version of Node.js, upgrading to v5 should take only a few minutes. See https://www.apollographql.com/docs/apollo-server/previous-versions for details.
     peerDependencies:
       graphql: ^16.6.0
 
@@ -17305,17 +17305,22 @@ packages:
   '@kwsites/promise-deferred@1.1.1':
     resolution: {integrity: sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==}
 
+  '@ledgerhq/client-ids@0.10.1':
+    resolution: {integrity: sha512-O6PppTYLvCZrC3zCNpUhVkork7Dw6mfW4MZyEnIXe73hqFen7fMn0z6N4rh70f2xsnSgRnzze3cAAeQ6Pjp1gw==}
+
+  '@ledgerhq/coin-module-framework@2.1.0':
+    resolution: {integrity: sha512-HIeXL1cPrvxKQ1BtocXPXnqv7WnWkAZ8vf136XLq/LosG/e4/NOoqblWyux7LEpUgn8Lyljnc1bu1V5VI6MVQA==}
+    peerDependencies:
+      '@ledgerhq/errors': ^6.33.0
+      '@ledgerhq/live-env': ^2.31.0
+
   '@ledgerhq/coin-module-framework@3.3.0':
     resolution: {integrity: sha512-RrraRhfhCfPw59P9e/jXw+GjBNAfQgiK7l5GXLZNkMV2GIf3gk0td1NevIo4VrM2A3u5HyZOBbHOGz1//Eja2Q==}
     peerDependencies:
       '@ledgerhq/errors': ^6.33.0
 
-  '@ledgerhq/coin-xrp@7.21.7':
-    resolution: {integrity: sha512-g6LCOiECPU2sdYKb70+3kpmWHJtw+Dg3N8mAAuHxX5vDbmucqIz3WZRaMfchI6PY2zz34Vlt6i+hjeUgTtywUg==}
-    peerDependencies:
-      '@ledgerhq/errors': ^6.33.0
-      '@ledgerhq/live-network': ^2.4.0
-      '@ledgerhq/logs': ^6.17.0
+  '@ledgerhq/coin-xrp@7.22.0':
+    resolution: {integrity: sha512-irP2RimuyDLW7cjKGhWfB7AFYZ9eBwUdqVWe1mtWUSxSpQipoBa6Y2mkRLSm6zjD8CjFU26DpPxHTey+v338xA==}
 
   '@ledgerhq/context-module@2.1.0':
     resolution: {integrity: sha512-t5mIA6DcxGafYF1xEHwAj6RyxvmTY5ZfnC/qxVf3PEF65+3J11qcw5Xs3pYWz49mSXQxjTiGKWs0JINiZagGWA==}
@@ -17342,6 +17347,9 @@ packages:
         optional: true
       react-native:
         optional: true
+
+  '@ledgerhq/cryptoassets@13.50.0':
+    resolution: {integrity: sha512-XMUSo8xm0FD1U2VT7ykpj6of9L0tfk1i3ZNlvx2owPxtwJhycldhs7xIaaS4VAxn8QHxqGqEFT1e6FcicXu3lA==}
 
   '@ledgerhq/device-management-kit@1.6.0':
     resolution: {integrity: sha512-WVWALWxEALhBkRetk46bFpnfQjhY1wspORCjB9SxBLvNg0C4lf9cHf/EzFRTdz2UnYMQsWTjaeZLvtA7furQHQ==}
@@ -17422,6 +17430,9 @@ packages:
   '@ledgerhq/errors@6.32.0':
     resolution: {integrity: sha512-BjjvhLM6UXYUbhllqAduo9PSneLt9FXZ3TBEUFQ3MMSZOCHt0gAgDySLwul99R8fdYWkXBza4DYQjUNckpN2lg==}
 
+  '@ledgerhq/errors@6.35.0':
+    resolution: {integrity: sha512-qk9PbqIvze7NXGogVxNCsz60rNo5FrGj8gKqs7pcyDk+em5L6s70G7cRxR+1HTXdam4WoPfntUq+WX9zQUynkg==}
+
   '@ledgerhq/hw-bolos@6.35.1':
     resolution: {integrity: sha512-+osQFmZAKv1JOMZPiYU3G8wgW/JqxA0HCe/Y/O+b72TyH0SOyiXybdyIc1//We6AUyrJ2CiG8cev3vPYfjsjwQ==}
 
@@ -17450,11 +17461,20 @@ packages:
   '@ledgerhq/live-env@2.31.0':
     resolution: {integrity: sha512-Hl5ldGa7lT7bKkNHruFepKhEWvb0hvjvQ1cXBbR7yp9I7EPceDXQt/uySOyaY41caWX0x27TUQIz3PVEv67HJA==}
 
+  '@ledgerhq/live-env@2.37.0':
+    resolution: {integrity: sha512-OGOtHPTbQiE0d52jpQ1gISDsoI9dJOxDL8moTarVofspa/veLRmz2e7Vv6t7g1ygxsRwrZvB1Cih0U7xDw/Q0w==}
+
   '@ledgerhq/live-network@2.4.3':
     resolution: {integrity: sha512-o55Mas7QvjqlwFVX5CL8DVl199i8gTn6j9Ljj+2nPetrsKtIrf2mz6leiUAgB5opWU4VyZpxKn65hXv5VD0b0Q==}
 
+  '@ledgerhq/live-network@2.6.3':
+    resolution: {integrity: sha512-LlKaurML28/zuAcgZiEeDGrqWtzm6G/U0n+pXS2U4su/KLHv70rA13LHGQYY/1Jxz7fP/XtzGWXl5jstYu8EXQ==}
+
   '@ledgerhq/live-promise@0.2.2':
     resolution: {integrity: sha512-1ve8lWgXxhvWgAQ8Z+Ka6WhCVk7IZV997x2YXAblo24XB/8Rn6dqTxMosdZ+vqcPeb5wMwmbcJVi2PMOPRpRTw==}
+
+  '@ledgerhq/live-promise@0.2.3':
+    resolution: {integrity: sha512-f673XOCKL/foDCbsqx2AWYfI1ehc5rGKLh3gObfTQSu3+MDJzhdd/pvyuVLJ0e6iUzUQlwLW27qEyvA7sNKvVQ==}
 
   '@ledgerhq/logs@5.50.0':
     resolution: {integrity: sha512-swKHYCOZUGyVt4ge0u8a7AwNcA//h4nx5wIi0sruGye1IJ5Cva0GyK9L2/WdX+kWVTKp92ZiEo1df31lrWGPgA==}
@@ -17464,6 +17484,9 @@ packages:
 
   '@ledgerhq/logs@6.16.0':
     resolution: {integrity: sha512-v/PLfb1dq1En35kkpbfRWp8jLYgbPUXxGhmd4pmvPSIe0nRGkNTomsZASmWQAv6pRonVGqHIBVlte7j1MBbOww==}
+
+  '@ledgerhq/logs@6.17.0':
+    resolution: {integrity: sha512-yra33g5q/AU7+PwAws+GaVpQGUuxnDREjVBnviJjcaJLVKuLzI4pnj8Bd3nY3fypM5k1yZEYKEXfUuGFUjP2+w==}
 
   '@ledgerhq/lumen-design-core@0.1.16':
     resolution: {integrity: sha512-haT2vS5HPPWRuqZHcU582U5drzf15OmRsjCSeKCzRw+6EEHUL++aaBlCBHyAQRboJe20vhWtjpa6czbBc/Iv7w==}
@@ -17548,6 +17571,9 @@ packages:
     resolution: {integrity: sha512-FCOGVs28pTxYEom+Yr8skQ1QUyj1+sC0YDvE+Xk+DfXQx8FMRI1l41x+XT8ZGPNUh8kRTd0hsZc2lqVpxD6a8w==}
     peerDependencies:
       '@ledgerhq/device-management-kit': ^1.5.1
+
+  '@ledgerhq/types-live@6.110.0':
+    resolution: {integrity: sha512-zhM0PZxXt8PoAt7W5aAdqlOhgHt4tzqUxSzlYWVJvXTdgVXbU+0YiamkXeHgkRtPUCMsCAQ1RBzrS3Y18/b2pg==}
 
   '@ledgerhq/wallet-api-client-react@1.4.25':
     resolution: {integrity: sha512-S+M+CpNOpOF89CVmxMTJUrao4DW7EJgmwLzQ8xmOJEPMj9hLb+Slei4Vd452+ZNSW1rwJ2ZExvbIqawwoJVR5g==}
@@ -21985,7 +22011,7 @@ packages:
       metro-react-native-babel-preset: '*'
       react: 19.0.0
       react-dom: 19.0.0
-      webpack: '*'
+      webpack: ^5.89.0
     peerDependenciesMeta:
       '@react-native/babel-preset':
         optional: true
@@ -23961,7 +23987,7 @@ packages:
   '@xmldom/xmldom@0.7.13':
     resolution: {integrity: sha512-lm2GW5PkosIzccsaZIz7tp8cPADSIlIHWDFTR1N0SzfinhhYgeIQjFMz4rYzanCScr3DqQLeomUDArp6MWKm+g==}
     engines: {node: '>=10.0.0'}
-    deprecated: this version is no longer supported, please update to at least 0.8.*
+    deprecated: this version has critical issues, please update to the latest version
 
   '@xmldom/xmldom@0.8.10':
     resolution: {integrity: sha512-2WALfTl4xo2SkGCYRt6rDTFfk9R1czmBvUQy12gK2KuRKIpWEhcbbzy8EZXtz/jkRqHX8bFEc6FC1HjX4TUWYw==}
@@ -24310,7 +24336,7 @@ packages:
     resolution: {integrity: sha512-/FQM1EDkTsf63Ub2C6O7GuYFDsSXUwsaZDurV0np41ocwq0jthUAYCmhBX9f+KwlaCgIuWyr/4WlUQUBfKfZog==}
     engines: {node: '>=6'}
     peerDependencies:
-      rxjs: '*'
+      rxjs: ^5.5.10
       zenObservable: '*'
     peerDependenciesMeta:
       rxjs:
@@ -45555,6 +45581,21 @@ snapshots:
 
   '@kwsites/promise-deferred@1.1.1': {}
 
+  '@ledgerhq/client-ids@0.10.1(react-redux@9.2.0(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)':
+    dependencies:
+      '@ledgerhq/live-env': 2.37.0
+      '@reduxjs/toolkit': 2.11.2(react-redux@9.2.0(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
+      uuid: 9.0.1
+    transitivePeerDependencies:
+      - react
+      - react-redux
+
+  '@ledgerhq/coin-module-framework@2.1.0(@ledgerhq/errors@6.35.0)(@ledgerhq/live-env@libs+env)':
+    dependencies:
+      '@ledgerhq/errors': 6.35.0
+      '@ledgerhq/live-env': link:libs/env
+      bignumber.js: 9.1.2
+
   '@ledgerhq/coin-module-framework@3.3.0':
     dependencies:
       bignumber.js: 9.1.2
@@ -45564,18 +45605,22 @@ snapshots:
       '@ledgerhq/errors': link:libs/ledgerjs/packages/errors
       bignumber.js: 9.1.2
 
-  '@ledgerhq/coin-xrp@7.21.7(@ledgerhq/errors@libs+ledgerjs+packages+errors)(@ledgerhq/live-network@libs+live-network)(@ledgerhq/logs@libs+ledgerjs+packages+logs)':
+  '@ledgerhq/coin-xrp@7.22.0(@ledgerhq/live-env@libs+env)(react-redux@9.2.0(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)':
     dependencies:
-      '@ledgerhq/coin-module-framework': 3.3.0(@ledgerhq/errors@libs+ledgerjs+packages+errors)
-      '@ledgerhq/errors': link:libs/ledgerjs/packages/errors
-      '@ledgerhq/live-network': link:libs/live-network
-      '@ledgerhq/logs': link:libs/ledgerjs/packages/logs
+      '@ledgerhq/coin-module-framework': 2.1.0(@ledgerhq/errors@6.35.0)(@ledgerhq/live-env@libs+env)
+      '@ledgerhq/cryptoassets': 13.50.0(react-redux@9.2.0(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
+      '@ledgerhq/errors': 6.35.0
+      '@ledgerhq/live-network': 2.6.3
+      '@ledgerhq/logs': 6.17.0
       bignumber.js: 9.1.2
       invariant: 2.2.4
       ripple-address-codec: 5.0.0
       ripple-binary-codec: 1.11.0
     transitivePeerDependencies:
+      - '@ledgerhq/live-env'
       - bufferutil
+      - react
+      - react-redux
       - utf-8-validate
 
   '@ledgerhq/context-module@2.1.0(@ledgerhq/device-management-kit@1.6.0(rxjs@7.8.2))':
@@ -45615,6 +45660,20 @@ snapshots:
       '@ledgerhq/lumen-ui-rnative': 0.1.39(ed4a91ce2529067bcbfd78c12f2ad1cc)
       react-dom: 19.0.0(react@19.0.0)
       react-native: 0.79.7(patch_hash=4744872a4d5177ec833786050853390422679378b06f4cf3a90ad6e27b560053)(@babel/core@7.28.5)(@react-native-community/cli@15.1.0(typescript@6.0.2))(@types/react@19.0.14)(metro-transform-worker@0.81.5)(metro@0.81.5)(react@19.0.0)
+
+  '@ledgerhq/cryptoassets@13.50.0(react-redux@9.2.0(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)':
+    dependencies:
+      '@ledgerhq/errors': 6.35.0
+      '@ledgerhq/live-env': 2.37.0
+      '@ledgerhq/logs': 6.17.0
+      '@ledgerhq/types-live': 6.110.0(react-redux@9.2.0(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
+      '@reduxjs/toolkit': 2.11.2(react-redux@9.2.0(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
+      invariant: 2.2.4
+      lodash: 4.17.21
+      zod: 4.3.6
+    transitivePeerDependencies:
+      - react
+      - react-redux
 
   '@ledgerhq/device-management-kit@1.6.0':
     dependencies:
@@ -45788,6 +45847,8 @@ snapshots:
 
   '@ledgerhq/errors@6.32.0': {}
 
+  '@ledgerhq/errors@6.35.0': {}
+
   '@ledgerhq/hw-bolos@6.35.1':
     dependencies:
       '@ledgerhq/hw-transport': link:libs/ledgerjs/packages/hw-transport
@@ -45822,6 +45883,11 @@ snapshots:
       rxjs: 7.8.2
       utility-types: 3.11.0
 
+  '@ledgerhq/live-env@2.37.0':
+    dependencies:
+      rxjs: 7.8.2
+      utility-types: 3.11.0
+
   '@ledgerhq/live-network@2.4.3':
     dependencies:
       '@ledgerhq/errors': 6.32.0
@@ -45831,15 +45897,30 @@ snapshots:
       axios: 1.13.2
       lru-cache: 7.18.3
 
+  '@ledgerhq/live-network@2.6.3':
+    dependencies:
+      '@ledgerhq/errors': 6.35.0
+      '@ledgerhq/live-env': 2.37.0
+      '@ledgerhq/live-promise': 0.2.3
+      '@ledgerhq/logs': 6.17.0
+      axios: 1.13.5
+      lru-cache: 7.18.3
+
   '@ledgerhq/live-promise@0.2.2':
     dependencies:
       '@ledgerhq/logs': 6.16.0
+
+  '@ledgerhq/live-promise@0.2.3':
+    dependencies:
+      '@ledgerhq/logs': 6.17.0
 
   '@ledgerhq/logs@5.50.0': {}
 
   '@ledgerhq/logs@6.12.0': {}
 
   '@ledgerhq/logs@6.16.0': {}
+
+  '@ledgerhq/logs@6.17.0': {}
 
   '@ledgerhq/lumen-design-core@0.1.16':
     dependencies:
@@ -46043,6 +46124,15 @@ snapshots:
     dependencies:
       '@ledgerhq/device-management-kit': 1.6.0(rxjs@7.8.2)
       '@sentry/minimal': 6.19.7
+
+  '@ledgerhq/types-live@6.110.0(react-redux@9.2.0(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)':
+    dependencies:
+      '@ledgerhq/client-ids': 0.10.1(react-redux@9.2.0(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
+      bignumber.js: 9.1.2
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - react
+      - react-redux
 
   '@ledgerhq/wallet-api-client-react@1.4.25(@ton/crypto@3.3.0)(react@19.0.0)':
     dependencies:
