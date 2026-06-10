@@ -552,13 +552,6 @@ export const DEFAULT_FEATURES: Features = {
     },
   },
 
-  lldActionCarousel: {
-    enabled: false,
-    params: {
-      variant: ABTestingVariants.variantA,
-    },
-  },
-
   ptxSwapMoonpayProvider: DEFAULT_FEATURE,
   ptxSwapExodusProvider: DEFAULT_FEATURE,
 

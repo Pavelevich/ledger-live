@@ -235,7 +235,6 @@ export type Features = CurrencyFeatures & {
   lldChatbotSupport: Feature_LldChatbotSupport;
   llmChatbotSupport: Feature_LlmChatbotSupport;
   myLedgerDisplayAppDeveloperName: Feature_MyLedgerDisplayAppDeveloperName;
-  lldActionCarousel: Feature_lldActionCarousel;
   lldRefreshMarketData: Feature_LldRefreshMarketData;
   llmRefreshMarketData: Feature_LlmRefreshMarketData;
   lldWalletSync: Feature_LldWalletSync;
@@ -689,10 +688,6 @@ export type Feature_LlmAnalyticsOptInPrompt = Feature<{
 export type Feature_LldAnalyticsOptInPrompt = Feature<{
   variant: ABTestingVariants;
   entryPoints: Array<string>;
-}>;
-
-export type Feature_lldActionCarousel = Feature<{
-  variant: ABTestingVariants;
 }>;
 
 export type Feature_LldRefreshMarketData = Feature<{

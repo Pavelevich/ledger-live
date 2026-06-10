@@ -1,7 +1,5 @@
 import React, { memo } from "react";
 import ClassicTopBar from "~/renderer/components/TopBar";
-import ActionContentCards from "~/renderer/screens/dashboard/ActionContentCards";
-import { ABTestingVariants } from "@ledgerhq/types-live";
 import { PageViewModelResult } from "./usePageViewModel";
 import { ClassicLayout, Wallet40Layout, ScrollUpButton } from "./components";
 import RightPanel from "LLD/components/RightPanel";
@@ -23,8 +21,6 @@ export const PageView = memo(function PageView({
   isScrollAtUpperBound,
   isWallet40Enabled,
   shouldDisplayWallet40MainNav,
-  shouldDisplayBrazePlacement,
-  pathname,
   onClickScrollUp,
   shouldRenderRightPanel,
 }: PageViewProps) {
@@ -45,10 +41,6 @@ export const PageView = memo(function PageView({
       )}
       {!shouldDisplayWallet40MainNav && (
         <ScrollUpButton isVisible={isScrollUpButtonVisible} onClick={onClickScrollUp} />
-      )}
-      {/* Only on dashboard; hide sticky variant when Braze placement (cards shown in banner only) */}
-      {pathname === "/" && !shouldDisplayBrazePlacement && (
-        <ActionContentCards variant={ABTestingVariants.variantB} />
       )}
     </div>
   );
